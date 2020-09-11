@@ -1,0 +1,205 @@
+---
+title: "Pacific Herring LD"
+author: "Joe McGirr"
+date: "8/3/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(reshape2)
+library(plyranges)
+library(seqinr)
+library(data.table)
+#BiocManager::install("visFuns.R")
+
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+## Rough Ne estimate using Watterson's theta
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+# Rough Ne estimate using waterson's theta
+
+# http://evomics.org/learning/population-and-speciation-genomics/2018-population-and-speciation-genomics/angsd-activity-sfs-fst-pbs/
+
+pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+pop <- "PWS07"
+ne_s <- c()
+for (pop in pop_names){
+x<-scan(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.sfs", sep = ""))
+
+nSites<-sum(x)   #Number of sites where we have data
+nSeg<-sum(x[c(-1)])    #Number of segregating sites
+an <- function(n) sum(1/1:(n-1))
+thetaW <- nSeg/an(length(x[c(-1)])/2) # Wattersons Theta
+#print(pop)
+#print("effective population size")
+ne <- thetaW / 2.0e-9 / nSites / 4 # effective population size
+#print(ne)
+ne_s <- c(ne_s, ne)
+}
+
+barplot(ne_s, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red,red,red,blu,blu,blu,blu,yel,yel,yel,grb,lir,org),cex.names=0.8)
+
+# using thetaW from pestPG per chr (ex:population_BC17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.thetas.idx.pestPG  chr1)
+thetaW <- 19986
+nsites <- 117453
+ne <- thetaW / 2.0e-9 / nSites / 4 # effective population size
+ne
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+pop <- "PWS17"
+
+for (pop in pop_names){
+
+# write out smaller files (60k pairs instead of 3m)
+  
+#ld <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_ld.txt",sep = ''), header = FALSE, stringsAsFactors = FALSE)
+#colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_EM","r_squared_EM")
+#ld1 <- ld[seq(1, nrow(ld), 60), ]
+
+#write.table(ld1, paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop,"_60k_pairs_ld.txt",sep = ''), quote = FALSE, sep = '\t', row.names = FALSE, col.names = FALSE)
+
+# plot(ld1$distance, ld1$r_squared_pearson)
+# plot(ld1$distance, ld1$D_EM)
+# plot(ld1$distance, ld1$D_prime_EM)
+# 
+# plot(ld1$distance, ld1$r_squared_EM, xlim = c(0,10000))
+# 
+# range(ld1$r_squared_EM)
+
+}
+
+
+
+```
+
+## LD Decay 
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+pop_names = c("PWS91","PWS96","PWS07","PWS17")
+pop_line <- c(4,3,2,1)
+pop <- "PWS91"
+
+ld <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop,"_60k_pairs_ld.txt",sep = ''), header = FALSE, stringsAsFactors = FALSE)
+colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_EM","r_squared_EM")
+ld[mapply(is.infinite, ld)] <- NA
+ld <- na.omit(ld)
+
+plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "PWS")
+legend(835, 0.6, legend=c("91", "96","06/07","17"),col="black", lty=c(4,3,2,1), cex=1)
+
+for (i in c(1:length(pop_names))){
+
+# plot LD decay with smooth spline
+ld <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop_names[i],"_60k_pairs_ld.txt",sep = ''), header = FALSE, stringsAsFactors = FALSE)
+colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_EM","r_squared_EM")
+ld[mapply(is.infinite, ld)] <- NA
+ld <- na.omit(ld)
+
+smooth_ld <-   smooth.spline(ld$distance, ld$r_squared_EM, spar = .15)
+lines(smooth_ld, lwd = 2,lty = pop_line[i], col = red)
+
+}
+
+
+
+# TB
+
+pop_names = c("TB91","TB96","TB06","TB17")
+pop_line <- c(4,3,2,1)
+pop <- "PWS91"
+
+plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "TB")
+legend(835, 0.6, legend=c("91", "96","06/07","17"),col="black", lty=c(4,3,2,1), cex=1)
+
+
+for (i in c(1:length(pop_names))){
+
+# plot LD decay with smooth spline
+ld <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop_names[i],"_60k_pairs_ld.txt",sep = ''), header = FALSE, stringsAsFactors = FALSE)
+colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_EM","r_squared_EM")
+ld[mapply(is.infinite, ld)] <- NA
+ld <- na.omit(ld)
+
+smooth_ld <-   smooth.spline(ld$distance, ld$r_squared_EM, spar = .15)
+lines(smooth_ld, lwd = 2,lty = pop_line[i], col = blu)
+
+}
+
+# SS
+pop_names = c("SS96","SS06","SS17")
+pop_line <- c(3,2,1)
+pop <- "PWS91"
+
+plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "SS")
+legend(835, 0.6, legend=c("96","06/07","17"),col="black", lty=c(3,2,1), cex=1)
+
+
+for (i in c(1:length(pop_names))){
+
+# plot LD decay with smooth spline
+ld <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop_names[i],"_60k_pairs_ld.txt",sep = ''), header = FALSE, stringsAsFactors = FALSE)
+colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_EM","r_squared_EM")
+ld[mapply(is.infinite, ld)] <- NA
+ld <- na.omit(ld)
+
+smooth_ld <-   smooth.spline(ld$distance, ld$r_squared_EM, spar = .15)
+lines(smooth_ld, lwd = 2,lty = pop_line[i], col = yel)
+
+}
+
+
+# southern 2017s
+pop_names = c("BC17","WA17","CA17")
+pop_cols = c(grb,lir,org)
+pop_line <- c(3,2,1)
+pop <- "PWS91"
+
+plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "BC WA CA")
+legend(835, 0.6, legend=c("BC17","WA17","CA17"),col=c(grb,lir,org), lty=c(1,1,1), cex=1)
+
+
+for (i in c(1:length(pop_names))){
+
+# plot LD decay with smooth spline
+ld <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/ngsLD/chr1_thin20k_",pop_names[i],"_60k_pairs_ld.txt",sep = ''), header = FALSE, stringsAsFactors = FALSE)
+colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_EM","r_squared_EM")
+ld[mapply(is.infinite, ld)] <- NA
+ld <- na.omit(ld)
+
+smooth_ld <-   smooth.spline(ld$distance, ld$r_squared_EM, spar = .15)
+lines(smooth_ld, lwd = 2,lty = 1, col = pop_cols[i])
+
+}
+
+
+```
+
+
+## Staiway plot 
+https://onlinelibrary.wiley.com/doi/full/10.1111/eva.12985
+https://github.com/popgenmethods/smcpp#quick-start-guide

@@ -1,0 +1,148 @@
+---
+title: "Pacific Herring Fst 8x8"
+author: "Joe McGirr"
+date: "8/3/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(reshape2)
+library(plyranges)
+library(seqinr)
+#BiocManager::install("visFuns.R")
+
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020_plate_rows.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/plates_1_through_5_rm.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+
+vcf_sample_info$pop_plate <- paste(vcf_sample_info$Population.Year,vcf_sample_info$Sequence.Plate, vcf_sample_info$plate_row, sep = "_")
+pop_plates <- unique(vcf_sample_info$pop_plate)
+pop_plate <- "BC17_6_1"
+
+for (pop_plate in pop_plates){
+  
+samps <- vcf_sample_info[vcf_sample_info$pop_plate == pop_plate,]
+#write.table(as.data.frame(samps$Sample), paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/samples_by_row/",pop_plate,".txt", sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
+    
+}
+
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/split_by_row_8x8/", full.names=T)
+file <- 1
+
+comp <- strsplit(fsts[file][1], "_mean_")
+comp <- gsub(".txt", "",comp[[1]][2])
+comp <- strsplit(comp[1], "_")
+meanfst <- read.table(fsts[file])[[1]]
+
+mean_fst <- data.frame(popA=comp[[1]][1],
+                       plateA=comp[[1]][2],
+                       rowA=comp[[1]][3],
+                       popB=comp[[1]][4],
+                       plateB=comp[[1]][5],
+                       rowB=comp[[1]][6],
+                       mean_fst_8x8=meanfst,
+                       stringsAsFactors=FALSE)
+
+for (file in c(2:length(fsts))){
+ 
+ comp <- strsplit(fsts[file][1], "_mean_")
+ comp <- gsub(".txt", "",comp[[1]][2])
+ comp <- strsplit(comp[1], "_")
+ meanfst <- read.table(fsts[file])[[1]] 
+ 
+ mf <-      data.frame(popA=comp[[1]][1],
+                       plateA=comp[[1]][2],
+                       rowA=comp[[1]][3],
+                       popB=comp[[1]][4],
+                       plateB=comp[[1]][5],
+                       rowB=comp[[1]][6],
+                       mean_fst_8x8=meanfst,
+                       stringsAsFactors=FALSE)
+ mean_fst <- rbind(mean_fst, mf)
+  
+}
+
+low_n <- c("TB06_12_6","SS06_20_5","TB06_14_8","TB91_6_3","TB96_17_5","PWS91_18_3","TB96_16_6","CA17_13_1","CA17_13_8","SS06_8_3","SS96_13_5","SS96_18_6","TB91_11_7","PWS07_6_6","PWS07_7_4","PWS91_10_2","PWS91_11_8","PWS91_9_7")
+mean_fst$idA <- paste(mean_fst$popA,mean_fst$plateA,mean_fst$rowA, sep = "_")
+mean_fst$idB <- paste(mean_fst$popB,mean_fst$plateB,mean_fst$rowB, sep = "_")
+
+mean_fst <- mean_fst[!mean_fst$idA %in% low_n, ]
+mean_fst <- mean_fst[!mean_fst$idB %in% low_n, ]
+
+
+#write.table(mean_fst,"C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fst_8x8_means.txt", quote = FALSE, row.names = FALSE, sep = "\t")
+
+```
+
+## vcftools double check
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/vcftools_fst_CA17_v_WA17.weir.fst", header = TRUE, stringsAsFactors = FALSE)
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/vcftools_fst_PWS07_v_PWS91.weir.fst", header = TRUE, stringsAsFactors = FALSE)
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/vcftools_fst_TB91_v_TB06.weir.fst", header = TRUE, stringsAsFactors = FALSE)
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/vcftools_fst_TB91_v_TB96.weir.fst", header = TRUE, stringsAsFactors = FALSE)
+
+
+head(fst)
+
+fst <- fst %>% filter(WEIR_AND_COCKERHAM_FST != "NaN" & WEIR_AND_COCKERHAM_FST >= 0 & WEIR_AND_COCKERHAM_FST <=1)
+#fst <- fst %>% filter(WEIR_AND_COCKERHAM_FST != "NaN")
+
+mean(fst$WEIR_AND_COCKERHAM_FST)
+
+fst1 <- fst[fst$CHROM == "chr22",]
+plot(fst1$POS, fst1$WEIR_AND_COCKERHAM_FST)
+
+```
+
+## TB temporal comparisons do not show row effect in 8x8 fst comparisons. Still higher between TB91 v TB96 (0.23 - 0.29) than TB91 v TB06 (0.11 - 0.19). Higher values overall because of reduced sample size.
+
+## vcftools fst values are MUCH lower than angsd. Also shows similar values for TB91 v TB96 (0.02) and TB91 v TB06 (0.03)
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+
+ml <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/WA17_CA17.ml", header = FALSE, stringsAsFactors = FALSE, sep = " ")
+head(ml)
+length(ml)
+
+https://github.com/mfumagalli/ngsTools/blob/master/TUTORIAL.md
+https://github.com/ANGSD/angsd/issues/259
+
+COMPARE: does whichFst 1 make a difference? Nope, worse actually
+/home/jamcgirr/apps/angsd/misc/realSFS fst stats tester.fst.idx 
+/home/jamcgirr/apps/angsd/misc/realSFS fst stats comp_BC17_WA17_CA17.fst.idx 
+
+```
