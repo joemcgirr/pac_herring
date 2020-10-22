@@ -1,0 +1,19 @@
+Name                : GenomicsDBImport
+User                : jamcgirr
+Partition           : high
+Nodes               : c9-76
+Cores               : 13
+GPUs                : 0
+State               : FAILED
+Submit              : 2020-04-27T08:19:15
+Start               : 2020-04-27T08:19:15
+End                 : 2020-04-27T08:19:21
+Reserved walltime   : 6-00:00:00
+Used walltime       :   00:00:06
+Used CPU time       :   00:00:08
+% User (Computation): 89.77%
+% System (I/O)      :  0.00%
+Mem reserved        : 32G/node
+Max Mem used        : 0.00  (c9-76)
+Max Disk Write      : 0.00  (c9-76)
+Max Disk Read       : 0.00  (c9-76)

@@ -1,0 +1,10 @@
+/home/eoziolor/phpopg/data/align/0561_PWS91.bam
+/home/eoziolor/phpopg/data/align/0562_PWS91.bam
+/home/eoziolor/phpopg/data/align/0563_PWS91.bam
+/home/eoziolor/phpopg/data/align/0564_PWS91.bam
+/home/eoziolor/phpopg/data/align/0565_PWS91.bam
+/home/eoziolor/phpopg/data/align/0567_PWS91.bam
+/home/eoziolor/phpopg/data/align/0568_PWS91.bam
+/home/eoziolor/phpopg/data/align/0585_PWS91.bam
+/home/eoziolor/phpopg/data/align/0586_PWS91.bam
+/home/eoziolor/phpopg/data/align/0588_PWS91.bam

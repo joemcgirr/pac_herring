@@ -1,0 +1,9 @@
+Using GATK jar /share/apps/gatk-4.0.11.0/gatk-package-4.0.11.0-local.jar
+Running:
+    java -Dsamjdk.use_async_io_read_samtools=false -Dsamjdk.use_async_io_write_samtools=true -Dsamjdk.use_async_io_write_tribble=false -Dsamjdk.compression_level=2 -Xmx28g -Xms16g -jar /share/apps/gatk-4.0.11.0/gatk-package-4.0.11.0-local.jar GenomicsDBImport --genomicsdb-workspace-path /scratch/jamcgirr/combine_gvcfs/ph_database --batch-size 50 -L /home/jamcgirr/ph/combine_gvcfs/whole_g_intervals.list --sample-name-map /home/jamcgirr/ph/combine_gvcfs/ph.gvcfs_map --tmp-dir=/scratch/jamcgirr/combine_gvcfs/gvcf_tmp --reader-threads 4
+***********************************************************************
+
+A USER ERROR has occurred: Failure working with the tmp directory /scratch/jamcgirr/combine_gvcfs/gvcf_tmp. Try changing the tmp dir with with --tmp-dir on the command line.  Exact error was should exist and have read/write access
+
+***********************************************************************
+Set the system property GATK_STACKTRACE_ON_USER_EXCEPTION (--java-options '-DGATK_STACKTRACE_ON_USER_EXCEPTION=true') to print the stack trace.

@@ -1,7 +1,7 @@
 ---
-title: "Pacific Herring LD"
+title: "Pacific Herring LD and pi"
 author: "Joe McGirr"
-date: "8/3/2020"
+date: "9/14/2020"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -33,8 +33,7 @@ gry<-  '#BBBBBB'
 
 ```
 
-## Rough Ne estimate using Watterson's theta
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+```{r, echo=FALSE,eval = FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
 # Rough Ne estimate using waterson's theta
 
@@ -57,18 +56,18 @@ ne <- thetaW / 2.0e-9 / nSites / 4 # effective population size
 ne_s <- c(ne_s, ne)
 }
 
-barplot(ne_s, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red,red,red,blu,blu,blu,blu,yel,yel,yel,grb,lir,org),cex.names=0.8)
+#barplot(ne_s, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red,red,red,blu,blu,blu,blu,yel,yel,yel,grb,lir,org),cex.names=0.8)
 
 # using thetaW from pestPG per chr (ex:population_BC17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.thetas.idx.pestPG  chr1)
 thetaW <- 19986
-nsites <- 117453
+nSites <- 117453
 ne <- thetaW / 2.0e-9 / nSites / 4 # effective population size
-ne
+#ne
 
 ```
 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7, eval = FALSE}
 
 pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
 pop <- "PWS17"
@@ -98,6 +97,7 @@ for (pop in pop_names){
 ```
 
 ## LD Decay 
+### No big differences in LD decay between populations. Drops to background levels between 200-400bp (Atlantic Herring LD drops off around 100bp).
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
 pop_names = c("PWS91","PWS96","PWS07","PWS17")
@@ -109,8 +109,11 @@ colnames(ld) <- c("snpA","snpB","distance","r_squared_pearson","D_EM","D_prime_E
 ld[mapply(is.infinite, ld)] <- NA
 ld <- na.omit(ld)
 
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/LD_PWS.png", height = 6, width = 7, units = 'in', res = 600)
+
+
 plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "PWS")
-legend(835, 0.6, legend=c("91", "96","06/07","17"),col="black", lty=c(4,3,2,1), cex=1)
+legend(835, 0.6, legend=c("91", "96","06/07","17"),col="black", lty=c(4,3,2,1), cex=1,bty = "n" )
 
 for (i in c(1:length(pop_names))){
 
@@ -125,7 +128,7 @@ lines(smooth_ld, lwd = 2,lty = pop_line[i], col = red)
 
 }
 
-
+#dev.off()
 
 # TB
 
@@ -134,7 +137,7 @@ pop_line <- c(4,3,2,1)
 pop <- "PWS91"
 
 plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "TB")
-legend(835, 0.6, legend=c("91", "96","06/07","17"),col="black", lty=c(4,3,2,1), cex=1)
+legend(835, 0.6, legend=c("91", "96","06/07","17"),col="black", lty=c(4,3,2,1), cex=1,bty = "n" )
 
 
 for (i in c(1:length(pop_names))){
@@ -155,8 +158,10 @@ pop_names = c("SS96","SS06","SS17")
 pop_line <- c(3,2,1)
 pop <- "PWS91"
 
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/LD_SS.png", height = 6, width = 7, units = 'in', res = 600)
+
 plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "SS")
-legend(835, 0.6, legend=c("96","06/07","17"),col="black", lty=c(3,2,1), cex=1)
+legend(835, 0.6, legend=c("96","06/07","17"),col="black", lty=c(3,2,1), cex=1,bty = "n" )
 
 
 for (i in c(1:length(pop_names))){
@@ -172,6 +177,7 @@ lines(smooth_ld, lwd = 2,lty = pop_line[i], col = yel)
 
 }
 
+#dev.off()
 
 # southern 2017s
 pop_names = c("BC17","WA17","CA17")
@@ -180,7 +186,7 @@ pop_line <- c(3,2,1)
 pop <- "PWS91"
 
 plot(ld$distance, ld$r_squared_EM,xlim = c(0,1000), col = "white",ylim = c(0.1,0.6), xlab = "distance (bp)", ylab = expression(paste("r"^" 2")), main = "BC WA CA")
-legend(835, 0.6, legend=c("BC17","WA17","CA17"),col=c(grb,lir,org), lty=c(1,1,1), cex=1)
+legend(835, 0.6, legend=c("BC17","WA17","CA17"),col=c(grb,lir,org), lty=c(1,1,1), cex=1,bty = "n" )
 
 
 for (i in c(1:length(pop_names))){
@@ -196,10 +202,165 @@ lines(smooth_ld, lwd = 2,lty = 1, col = pop_cols[i])
 
 }
 
+## Stairway plot 
+#https://onlinelibrary.wiley.com/doi/full/10.1111/eva.12985
+#https://github.com/popgenmethods/smcpp#quick-start-guide
+
+```
+
+## ANGSD pairwise nucleotide diversity
+### Correcting pi using the standard method gives outrageously high estimates
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+
+#https://github.com/ANGSD/angsd/issues/329#issuecomment-681005380
+# pi
+
+pop <- "PWS91"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas <- thetas[thetas$nSites > 50,]
+#thetas$pi<- (thetas$tP*thetas$nSites)/10000
+thetas$pi<- thetas$tP/thetas$nSites
+#thetas$pi<- thetas$tP/50000
+thetas <- thetas[c("pi")]
+names(thetas)[names(thetas)=="pi"] <- pop
+
+for (pop in pop_names){
+
+thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas1 <- thetas1[thetas1$nSites > 50,]
+thetas1$pi<- thetas1$tP/thetas1$nSites
+thetas1[c("Chr","WinCenter","pi")]
+thetas$pi <- thetas1$pi
+names(thetas)[names(thetas)=="pi"] <- pop 
+  
+}
+
+my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir)
+thetas <- na.omit(thetas)
+p1 <- thetas %>% 
+      gather(key="MesureType", value="Val") %>%
+      ggplot( aes(x=reorder(MesureType,Val, FUN = median), y=Val, fill=MesureType)) +
+      geom_violin() + xlab("\npopulation/year") + ylab("pi\n")+
+      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
+      theme_minimal()
+      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+p1
+
+```
+
+## VCFtools pairwise diversity
+### Based on hard calls and is known to underestimate pi (Korunes and Samuk 2020)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+
+pop <- "PWS91"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/vcftools/pi_50kb_win_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.txt.windowed.pi',sep = ""))
+#thetas$pi<- (thetas$tP*thetas$nSites)/10000
+#thetas$pi<- thetas$tP/thetas$nSites
+#thetas$pi<- thetas$tP/50000
+thetas <- head(thetas, 14500)
+thetas <- thetas[c("PI")]
+names(thetas)[names(thetas)=="PI"] <- pop
+
+for (pop in pop_names){
+
+thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/vcftools/pi_50kb_win_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.txt.windowed.pi',sep = ""))
+#thetas1$pi<- (thetas1$tP*thetas1$nSites)/10000
+#thetas1$pi<- thetas1$tP/thetas1$nSites
+#thetas1[c("Chr","WinCenter","pi")]
+thetas1 <- head(thetas1, nrow(thetas))
+thetas$pi <- thetas1$PI
+names(thetas)[names(thetas)=="pi"] <- pop 
+  
+}
+
+my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir)
+p1 <- thetas %>% 
+      gather(key="MesureType", value="Val") %>%
+      ggplot( aes(x=reorder(MesureType,Val, FUN = median), y=Val, fill=MesureType)) +
+      geom_violin() + xlab("\npopulation/year") + ylab("pi\n")+
+      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
+      theme_minimal()
+      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+p1
 
 ```
 
 
-## Staiway plot 
-https://onlinelibrary.wiley.com/doi/full/10.1111/eva.12985
-https://github.com/popgenmethods/smcpp#quick-start-guide
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7, eval = FALSE}
+
+pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+## ANGSD pairwise nucleotide diversity corrected the way I think it should be
+
+#https://github.com/ANGSD/angsd/issues/329#issuecomment-681005380
+# pi
+
+pop <- "PWS91"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+#thetas$pi<- (thetas$tP*thetas$nSites)/10000
+#thetas$pi<- thetas$tP/thetas$nSites
+thetas <- thetas[thetas$nSites > 50,]
+thetas$pi<- thetas$tP/50000
+thetas <- thetas[c("pi")]
+names(thetas)[names(thetas)=="pi"] <- pop
+
+for (pop in pop_names){
+
+thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas1 <- thetas1[thetas1$nSites > 50,]
+thetas1$pi<- thetas1$tP/50000
+#thetas1$pi<- thetas1$tP/thetas1$nSites
+thetas1[c("Chr","WinCenter","pi")]
+thetas$pi <- thetas1$pi
+names(thetas)[names(thetas)=="pi"] <- pop 
+  
+}
+
+my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir)
+thetas <- na.omit(thetas)
+p1 <- thetas %>% 
+      gather(key="MesureType", value="Val") %>%
+      ggplot( aes(x=reorder(MesureType,Val, FUN = median), y=Val, fill=MesureType)) +
+      geom_violin() + xlab("\npopulation/year") + ylab("pi\n")+
+      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
+      theme_minimal()
+      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+p1
+
+```
+
+## Rough Ne based on Watterson's Theta and Atlantic Herring mutation rate (2.0e-9)
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+nes <- c()
+pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+for (pop in pop_names){
+
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas <- thetas[thetas$nSites > 50,]
+thetas$W<- thetas$tW/50000
+#thetas$W<- thetas$tW/thetas$nSites
+#W_means <- c(W_means, mean(thetas$W))
+ne <- mean(thetas$W) / 2.0e-9 / 4
+nes <- c(nes, ne)
+}
+
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/rough_Ne.png", height = 6, width = 10, units = 'in', res = 600)
+
+barplot(nes, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red,red,red,blu,blu,blu,blu,yel,yel,yel,grb,lir,org),cex.names=0.8)
+
+#dev.off()
+
+
+```

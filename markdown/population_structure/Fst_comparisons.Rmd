@@ -15,7 +15,7 @@ library(reticulate)
 library(reshape2)
 library(plyranges)
 library(seqinr)
-#BiocManager::install("visFuns.R")
+#BiocManager::install("seqinr")
 
 
 # color-blind friendly 
@@ -36,31 +36,31 @@ gry<-  '#BBBBBB'
 ## Fst matrix 2017 samples
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/", full.names=T)
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/", full.names=T)
 
 
 # 2017 samples
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_SS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_SS17.txt")
 tbxpw <- round(mean(fst$Fst01),4)
 tbxss <- round(mean(fst$Fst02),4)
 pwxss <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_BC17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_BC17.txt")
 tbxbc <- round(mean(fst$Fst02),4)
 pwxbc <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_WA17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_WA17.txt")
 tbxwa <- round(mean(fst$Fst02),4)
 pwxwa <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_CA17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_CA17.txt")
 tbxca <- round(mean(fst$Fst02),4)
 pwxca <- round(mean(fst$Fst12),4)
 
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_BC17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_BC17.txt")
 ssxbc <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_WA17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_WA17.txt")
 ssxwa <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_CA17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_CA17.txt")
 ssxca <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_BC17_WA17_CA17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_BC17_WA17_CA17.txt")
 bcxwa <- round(mean(fst$Fst01),4)
 bcxca <- round(mean(fst$Fst02),4)
 waxca <- round(mean(fst$Fst12),4)
@@ -111,14 +111,14 @@ ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 # temporal samples PWS
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt")
 p91xp96 <- round(mean(fst$Fst01),4)
 p91xp07 <- round(mean(fst$Fst02),4)
 p96xp07 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS17.txt")
 p91xp17 <- round(mean(fst$Fst02),4)
 p96xp17 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt")
 p07xp17 <- round(mean(fst$Fst12),4)
 
 fst_vec <- c(0,p91xp96,p91xp07,p91xp17,
@@ -149,14 +149,14 @@ ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
 
 
 # temporal samples TB
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt")
 p91xp96 <- round(mean(fst$Fst01),4)
 p91xp07 <- round(mean(fst$Fst02),4)
 p96xp07 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt")
 p91xp17 <- round(mean(fst$Fst02),4)
 p96xp17 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_TB91_TB06_TB17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB06_TB17.txt")
 p07xp17 <- round(mean(fst$Fst12),4)
 
 fst_vec <- c(0,p91xp96,p91xp07,p91xp17,
@@ -187,7 +187,7 @@ geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
 
 
 # temporal samples SS
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_SS96_SS06_SS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_SS96_SS06_SS17.txt")
 p96xp07 <- round(mean(fst$Fst01),4)
 p96xp17 <- round(mean(fst$Fst02),4)
 p07xp17 <- round(mean(fst$Fst12),4)
@@ -235,7 +235,7 @@ pop0 <- "TB17"
 pop1 <- "PWS17"
 pop2 <- "SS17"
 
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/", full.names=T)
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/", full.names=T)
 
 fsts <- fsts[1]
 #f <- fsts[1]
@@ -245,7 +245,7 @@ for (f in fsts){
 pops <- strsplit(f, "_")
 pops <- c(pops[[1]][10], pops[[1]][11],gsub("\\.txt","",pops[[1]][12]))
 
-fst <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_",pops[1],"_",pops[2],"_",pops[3],".txt", sep = ""))
+fst <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_",pops[1],"_",pops[2],"_",pops[3],".txt", sep = ""))
 #head(fst)
 fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
 #fst$chr_num <- factor(fst$chr, levels = c(1:26))
@@ -330,7 +330,7 @@ pop0 <- "TB17"
 pop1 <- "PWS17"
 pop2 <- "SS17"
 
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/", full.names=T)
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/unfolded", full.names=T)
 
 fsts <- fsts[3]
 
@@ -339,7 +339,7 @@ for (f in fsts){
 pops <- strsplit(f, "_")
 pops <- c(pops[[1]][10], pops[[1]][11],gsub("\\.txt","",pops[[1]][12]))
 
-fst <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_",pops[1],"_",pops[2],"_",pops[3],".txt", sep = ""))
+fst <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_",pops[1],"_",pops[2],"_",pops[3],".txt", sep = ""))
 #head(fst)
 fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
 #fst$chr_num <- factor(fst$chr, levels = c(1:26))
@@ -683,9 +683,24 @@ print(p)
 
 
 
-## Fst outliers and GO enrichment for Chr 6
+## Fst persite
+
+```{r}
+
+
+
+```
+
+
+
+## Fst outliers and GO enrichment
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+library(pals)
+library(RColorBrewer)
+library(plotfunctions)
+library(circlize)
 
 gff <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/annotations/Clupea_harengus.Ch_v2.0.2.100.gff3",header = FALSE, sep = "\t",comment.char = '#')
 #head(gff)
@@ -701,89 +716,56 @@ genes <- genes %>% as_granges()
 fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/", full.names=T)
 
 
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt")
+#fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt")
+
+fst <- read.delim(fsts[13])
+
 fst <- fst %>% mutate(chr = gsub("[A-z]", "", chr))
 fst$start <- fst$midPos-9999
 fst$end <- fst$midPos+9999
 colnames(fst)[colnames(fst) == 'chr'] <- 'seqnames'
 
-#quantile(fst$Fst01,.999)
+#quantile(fst$Fst02,.99)
 fst_outlier <- fst[fst$Fst01 >= quantile(fst$Fst01,.99)[[1]],]
-
-
-focal_chr <- fst[fst$seqnames == 6,]
-focal_chr_outlier <- fst_outlier[fst_outlier$seqnames == 6,]
-
-
-focal_chr_outlier <- focal_chr_outlier %>% as_granges()
-focal_chr_genes <- join_overlap_intersect(focal_chr_outlier, genes) %>% as.data.frame()
-print("54 genes (Danio orthologs) within 50kb Fst outlier window (genome-wide mean > 99%ile)")
-unique(na.omit(focal_chr_genes$gene_name))
-gene_loc <- unique(focal_chr_genes[c("gene_name","start","end")])
-
-plot(focal_chr$midPos, focal_chr$Fst01, col = gry, xlab = "position", ylab = "Fst", main = "chr 6: PWS91 v. PWS96")
-points(focal_chr_genes$midPos, focal_chr_genes$Fst01, ylim = c(0,1), col = blu)
-# for (i in c(1:nrow(gene_loc))){
-# rect(gene_loc$start[i], -0, gene_loc$end[i], 1, border = NA, col = col2alpha(gre,0.2))
-# }
-#write.table(as.data.frame(unique(na.omit(chr6$gene_name))), "C:/Users/jmcgirr/Desktop/genes_delete.txt", quote= FALSE, row.names = FALSE)
-
-
-
-```
-
-## GO enrichment for 54 genes
-![](C:/Users/jmcgirr/Desktop/Capture.PNG)
-
-
-## Fst outliers and GO enrichment for CA v PWS chr 7
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-
-gff <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/annotations/Clupea_harengus.Ch_v2.0.2.100.gff3",header = FALSE, sep = "\t",comment.char = '#')
-#head(gff)
-colnames(gff) <- c("seqnames","source","type","start","end","score","strand","phase","attributes")
-genes <- gff[gff$type=="gene",]
-genes <- genes %>% separate(attributes, c("at1","at2"), remove = FALSE,sep = "Name=") %>% separate(at2, c("gene_name","at3"), extra = "drop",sep = ";")
-genes <- select(genes, -at1,-at3)
-g <- genes[genes$strand == "\\.",]
-#head(genes)
-genes <- droplevels(genes)
-
-genes <- genes %>% as_granges()
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/", full.names=T)
-
-
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_folded_BC17_WA17_CA17.txt")
-fst <- fst %>% mutate(chr = gsub("[A-z]", "", chr))
-fst$start <- fst$midPos-9999
-fst$end <- fst$midPos+9999
-colnames(fst)[colnames(fst) == 'chr'] <- 'seqnames'
-
-#quantile(fst$Fst01,.999)
 fst_outlier <- fst[fst$Fst02 >= quantile(fst$Fst02,.99)[[1]],]
+fst_outlier <- fst[fst$Fst12 >= quantile(fst$Fst12,.99)[[1]],]
 
 
-focal_chr <- fst[fst$seqnames == 7,]
-focal_chr_outlier <- fst_outlier[fst_outlier$seqnames == 7,]
+# use focal chromosome or genome-wide
+
+focal_chr_outlier <- fst_outlier
+# focal_chr <- fst[fst$seqnames == 6,]
+# focal_chr_outlier <- fst_outlier[fst_outlier$seqnames == 6,]
 
 
 focal_chr_outlier <- focal_chr_outlier %>% as_granges()
 focal_chr_genes <- join_overlap_intersect(focal_chr_outlier, genes) %>% as.data.frame()
-print("66 genes (Danio orthologs) within 50kb Fst outlier window (genome-wide mean > 99%ile)")
-unique(na.omit(focal_chr_genes$gene_name))
-gene_loc <- unique(focal_chr_genes[c("gene_name","start","end")])
 
-plot(focal_chr$midPos, focal_chr$Fst02, col = gry, xlab = "position", ylab = "Fst", main = "chr 7: BC17 v. CA17")
-points(focal_chr_genes$midPos, focal_chr_genes$Fst02, ylim = c(0,1), col = blu)
-# for (i in c(1:nrow(gene_loc))){
-# rect(gene_loc$start[i], -0, gene_loc$end[i], 1, border = NA, col = col2alpha(gre,0.2))
-# }
-#write.table(as.data.frame(unique(na.omit(focal_chr_genes$gene_name))), "C:/Users/jmcgirr/Desktop/genes_delete.txt", quote= FALSE, row.names = FALSE)
+#write.table(as.data.frame(unique(na.omit(focal_chr_genes$gene_name))), "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/GO/fst_outliers/PWS17_v_TB17_Fst_99percentile_genes.txt", quote= FALSE, row.names = FALSE, col.names = FALSE)
+
+go <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/GO/fst_outliers/PWS17_v_CA17_Fst_99percentile_genes_enrichment.csv", stringsAsFactors = FALSE, header = TRUE, sep = ",")
+
+head(go)
+#go <- go[order(go$Genes.in.list, decreasing = TRUE),]
+pal = colorRampPalette(c(red, blu))
+go$order = findInterval(go$Enrichment.FDR, sort(go$Enrichment.FDR))
+
+png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/GO/fst_outliers/PWS17_v_CA17_Fst_99percentile_genes_enrichment.png", width = 10, height = 8, units = 'in', res = 600)
+
+par(las=2) # make label text perpendicular to axis
+par(mar=c(3,22,8,5)) # increase y-axis margin.
+barplot(go$Genes.in.list, col=pal(nrow(go))[go$order],horiz=TRUE, names.arg=c(tolower(go$Functional.Category)), 
+        cex.names=0.8,xaxt = 'n')
+axis(1, las=1,cex.axis=0.9)
+gradientLegend(valRange=range(0,0.05), color = pal(nrow(go)),side = 4, n.seg=1,dec = 3, coords = TRUE)
+
+dev.off()
+
+#
+
 
 
 ```
 
-## GO enrichment for 66 genes
-![](C:/Users/jmcgirr/Desktop/Capture1.PNG)
+
 

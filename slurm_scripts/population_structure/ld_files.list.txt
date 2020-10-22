@@ -1,0 +1,14 @@
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_BC17_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_CA17_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_PWS07_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_PWS17_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_PWS91_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_PWS96_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_SS06_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_SS17_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_SS96_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_TB06_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_TB17_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_TB91_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_TB96_60k_pairs_ld.txt
+/home/jamcgirr/ph/data/angsd/ngsLD/chr1_thin20k_WA17_60k_pairs_ld.txt
