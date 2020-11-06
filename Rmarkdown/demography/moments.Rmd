@@ -7,6 +7,31 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(reshape2)
+library(plyranges)
+library(seqinr)
+#BiocManager::install("seqinr")
+
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
 ## 1D SFS 
 ```{python, echo = FALSE,results='hide'}
 
@@ -66,12 +91,113 @@ matplotlib.pyplot.savefig("my_plot")
 
 ```
 
+## Run a simple model
+one population split into two pops with symmetrical migration
+```{r}
+
+# http://evomics.org/wp-content/uploads/2016/01/dadi.pdf
+# In dadi, all parameters are scaled by the effective size of the ancestral population. To find
+# that effective size, we use the relationship θ = 4NeµL, where µ is the per-base mutation
+# rate, and L is length of sequence from which the SNPs came. So Ne = θ/4µL. 
+
+params <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/test/V1.sym_mig.optimized.txt")
+params <- params[order(params$AIC),]
+head(params)
+params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
+
+boxplot(params$log.likelihood~params$round)
+
+print("optimized parameter set for empirical data:")
+print(params$optimized_params...[1])
+
+   # Split into two populations, with symmetric migration.
+   # nu1: Size of population 1 after split.
+   # nu2: Size of population 2 after split.
+   # T: Time in the past of split (in units of 2*Na generations) 
+   # m: Migration rate between populations (2*Na*m)
+
+theta <- 2796.30
+nu1 <- 0.0614
+nu2 <- 0.1225
+m <- 24.8274
+t <- 0.0205
+
+# generation time
+g <- 4
+# atlantic herring mutation rate
+mu <- 2.0e-9
+
+L <- 10000     # number of snps analyzed
+L <- 25176157  # total length analyzed
+# effective size of ancestral population
+Nref <- theta / (4* mu* L)
+Nref
+
+# Time since split
+t*2*Nref*4
 
 
+################### Goodness of Fit
+#Change the path to your output files, which will have names specific to the model you labeled
+#These are for the example output files provided:
+sim_data <- read.delim("/Users/dan/Dropbox/Goodness_of_Fit/Empirical/Simulation_Results.txt", header = TRUE, sep = "\t")
+emp_data <- read.delim("/Users/dan/Dropbox/Goodness_of_Fit/Empirical/Empirical.sym_mig.optimized.txt", header = TRUE, sep = "\t")
+
+#check headers
+ls(sim_data)
+#should be: Simulation	Best_Replicate	log-likelihood	theta	sfs_sum	chi-squared	optimized_params
+ls(emp_data)
+#should be: Model	Replicate	log-likelihood	theta	sfs_sum	chi-squared
+
+#quick summary of files:
+summary(sim_data)
+summary(emp_data)
+
+#summary of variables for simulated sfs fits:
+summary(sim_data$log.likelihood)
+summary(sim_data$chi.squared)
+
+#summary of empirical values:
+emp_data$log.likelihood
+emp_data$chi.squared
 
 
+#####################################
+#FREQUENCY DISTRIBUTIONS
+#Edit below numbers to change the frequency distribution set up for your data,
+#by checking the summary functions above.
+
+#syntax for setting bin number is: seq(low number, high number, increment)
+#-----------------------------------------------------------------------------------------
+
+#likelihood plot
+#change the bin settings below
+ll_seq<- seq(-100,-20,2)
+hist(sim_data$log.likelihood, breaks=ll_seq, main = "Simulation Results - Log-likelihood distribution", xlab="log-likelihood", col="grey")
+abline(v=emp_data$log.likelihood, lwd = 3, col='blue')
+
+#chi-squared plot
+#change the bin settings below
+chi_seq<- seq(0,100,5)
+hist(sim_data$chi.squared, breaks=chi_seq, main = "Simulation Results - Chi-squared distribution ", xlab="Chi-squared test statistic", col="grey")
+abline(v=emp_data$chi.squared, lwd = 3, col='blue')
+
+#####################################
+#For log-transformed chi.squared
+
+#transform chi-squared test stat
+log_chi <- log(sim_data$chi.squared)
+emp_log_chi <- log(emp_data$chi.squared)
+summary(log_chi)
 
 
+#log transformed chi-squared plot
+#change the bin settings below
+lchi_seq<- seq(0,8,0.2)
+hist(log_chi, breaks=lchi_seq, main = "Simulation Results - Log Chi-squared distribution ", xlab="log Chi-squared test statistic", col="grey")
+abline(v=emp_log_chi, lwd = 3, col='blue')
+
+```
 
 
 
@@ -144,6 +270,10 @@ matplotlib.pyplot.savefig("C:/Users/jmcgirr/Desktop/my_plot2")
 #https://github.com/dportik/moments_pipeline
 
 #https://notebook.community/claudiuskerth/PhDthesis/Data_analysis/SNP-indel-calling/dadi/dadiExercises/.ipynb_checkpoints/First_Steps_with_dadi-checkpoint
+
+
+# autocorrelation and autocovariance
+#https://www.ssc.wisc.edu/~bhansen/390/390Lecture7.pdf
 
 ```
 

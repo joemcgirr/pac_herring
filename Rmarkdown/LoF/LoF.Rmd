@@ -1,0 +1,246 @@
+---
+title: "Looking for loss of function alleles"
+author: "Joe McGirr"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: no
+    df_print: paged
+    number_sections: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_depth: 5
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(reticulate)
+library(reshape2)
+library(plyranges)
+library(seqinr)
+#BiocManager::install("seqinr")
+
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+
+# Persite Fst
+
+## Post-collapse PWS populations vs. NE Pacific populations
+(PWS96 + PWS07 + PWS17) vs. (SS96 + SS06 + SS17 + BC17 + WA17)
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+plot_persite_fst<-function(fst){
+
+colnames(fst) <- c("chr","pos","alpha","beta")
+fst$fst <- fst$alpha / fst$beta
+fst <- na.omit(fst[fst$fst >=0,])
+print("Fst range")
+print(range(fst$fst))
+print("Fst mean")
+print(mean(fst$fst))
+
+fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
+fst$chr_num <- factor(fst$chr, levels = c(1:26))
+ 
+p <- ggplot(fst, aes(x = pos, y = fst)) + 
+      geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+      theme_minimal()+
+      theme(axis.text.x=element_blank())+
+      ylab("Fst\n")+ xlab("")+ 
+      #ggtitle(paste(pops[1],"vs. ", pops[2]))+
+      geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
+      facet_wrap(~chr, ncol = 9)
+print(p)
+   
+}
+
+
+
+
+
+fst <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/fst_persite_folded_pops_PWS96_07_17_v_NEPac.txt", header = FALSE)
+plot_persite_fst(fst)
+
+```
+
+
+## contemporary PWS vs. contemporary NE Pacific populations
+(PWS17) vs. (SS17 + BC17 + WA17)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+fst <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/fst_persite_folded_pops_PWS17_v_NEPac17.txt", header = FALSE)
+plot_persite_fst(fst)
+
+```
+
+## PWS pre-collapse vs. post-collapse
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+fst <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/fst_persite_folded_pops_PWS96_07_17_v_PWS91.txt", header = FALSE)
+plot_persite_fst(fst)
+
+
+```
+
+## Variant Effect Predictor VEP
+Ensemble resource. Input is:  
+  
+chromosome position Ref_Allele Alt_Allele  
+
+VEP outputs the effect of SNP in coding region.  
+Annotations relevant to LoF:  
+stop_gained  
+start_lost  
+stop_lost  
+missense  
+
+```{r}
+# # format SNP table (output from gatk variantsToTable)
+
+# snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/snp_table_VEP.txt", header =FALSE)
+# head(snp)
+# snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
+# snp$end <- snp$start 
+# snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
+# snp$strand <- "+"
+# head(snp)
+# snp <- snp[c("chromosome", "start","end","allele","strand")]
+
+# #write.table(snp, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/snp_table_VEP_standard_format.txt", col.names = FALSE, row.names = FALSE, sep = "\t", quote = FALSE)
+
+# identify missense
+vep <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/VEP_output_all_snps.txt", header =FALSE,comment.char = "#")
+head(vep)
+colnames(vep) <- c("Uploaded_variation","Location","Allele","Gene","Feature","Feature_type","Consequence","cDNA_position","CDS_position","Protein_position","Amino_acids","Codons","Existing_variation","Extra")
+
+unique(vep$Consequence)
+stop_gained <- vep[grepl('stop_gained', vep$Consequence), ]
+start_lost <- vep[grepl('start_lost', vep$Consequence), ]
+stop_lost <- vep[grepl('stop_lost', vep$Consequence), ]
+missense <- vep[grepl('missense', vep$Consequence), ]
+print("stop gained alleles")
+nrow(stop_gained)
+print("start lost alleles")
+nrow(start_lost) 
+print("stop lost alleles")
+nrow(stop_lost)
+print("missense alleles")
+nrow(missense)
+#head(vep$Uploaded_variation, 50)
+
+```
+
+## Allele frequencies for each population
+Estimate allele frequencies for each population with ANGSD  
+
+```{r}
+# knownEM specifies the algorithm used to estimate the allele frequency which is given under that column. Please note that this refers to the allele frequency of the allele labeled as minor.
+
+# maf file created using -ref to polarize.
+# this will allow us to assign frequencies to REF and ALT rather than major and minor
+# the latter will vary at some sites by population
+
+
+# check all coding mutations
+lof <- rbind(stop_gained,start_lost,stop_lost,missense)
+# #check individual types of mutations
+# lof <- stop_gained
+# lof <- missense
+# lof <- rbind(stop_gained,missense)
+
+lof <- unique(lof[c("Location")])
+lof <- lof %>% separate(Location, into = c("chromo","position"), sep = ":")
+lof$chromo <- paste("chr",lof$chromo, sep = "")
+
+pop <- "PWS91"
+maf <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/maf_for_vep/",pop,"_vcf.mafs", sep = ""), header =TRUE)
+maf <- maf[c("chromo","position", "knownEM")]
+colnames(maf)[colnames(maf)=="knownEM"] <- pop
+maf <- merge(lof,maf, by = c("chromo","position"))
+
+pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+for (pop in pop_names) {
+  
+maf1 <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/maf_for_vep/",pop,"_vcf.mafs", sep = ""), header =TRUE)
+maf1 <- maf1[c("chromo","position", "knownEM")]
+colnames(maf1)[colnames(maf1)=="knownEM"] <- pop
+maf <- merge(maf,maf1, by = c("chromo","position"))
+
+}
+
+maf_box <- maf[,3:16]
+
+maf_box %>% 
+  gather(key="MesureType", value="Val") %>%
+  ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
+  geom_boxplot()+
+  xlab("\npopulation/year") + ylab("LoF allele frequency\n")+
+  #geom_violin()+
+    theme_minimal()+
+    #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+    scale_fill_manual(values=c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir))
+
+maf_stack <- stack(maf_box)
+print("anova for all populations")
+an <- aov(maf_stack$value~maf_stack$ind)
+summary(an)
+TukeyHSD(an)
+
+focal_pops <- c("PWS91","PWS96","PWS07","PWS17")
+print("anova for focal populations:")
+print(focal_pops)
+maf_stack <- stack(maf_box[c(focal_pops)])
+an <- aov(maf_stack$value~maf_stack$ind)
+summary(an)
+TukeyHSD(an)
+
+focal_pops <- c("PWS96","PWS07","PWS17","SS96","SS06","SS17")
+print("anova for focal populations:")
+print(focal_pops)
+maf_stack <- stack(maf_box[c(focal_pops)])
+an <- aov(maf_stack$value~maf_stack$ind)
+summary(an)
+TukeyHSD(an)
+
+
+# ensure REF and ALT match maf output
+
+# test <- vep[c("Location", "Allele")]
+# test <- unique(test)
+# test <- test %>% separate(Location, into = c("chr","position"))
+# test$chrs <- "chr"
+# test$chromo <- paste(test$chrs, test$chr, sep = "")
+# colnames(test)[3] <- "minor"
+# test1 <- merge(maf, test, by = c("chromo", "position"))
+# test2 <- merge(maf, test, by = c("chromo", "position", "minor"))
+# nrow(test1)-nrow(test2)
+
+
+
+```
+

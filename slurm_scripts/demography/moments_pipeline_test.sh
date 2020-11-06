@@ -10,6 +10,8 @@
 #SBATCH -p high 
 
 source /home/jamcgirr/apps/my_python3.7/bin/activate
-python moments_Run_Optimizations.py
+#python moments_Run_Optimizations.py
+python Simulate_and_Optimize.py
+
 
 #command to run: sbatch script_moments_pipeline_test.sh

@@ -362,7 +362,7 @@ plot(p1$plot[[1]])
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
 library(ggplot2);library(data.table)
-theme_set(theme_classic())
+#theme_set(theme_classic())
 
 pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
@@ -373,7 +373,7 @@ vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
 vcf_sample_info$sampleID <- vcf_sample_info$Sample
 
 #load data
-#pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_noTB_random_thin_latent_coords.txt",header=T)
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_random_thin_latent_coords.txt",header=T)
 
 pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
 names(pd)[1:2] <- c("LD1","LD2")
@@ -385,6 +385,97 @@ dd <- merge(pd,vcf_sample_info,by="sampleID")
 #plot VAE
 ggplot(data=dd,aes(x=LD1,y=LD2,col=Population.Year))+
   geom_point()
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/pca.png", height = 5, width = 6.5, units = 'in', res = 600)
+
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_noTB_random_thin_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,red,yel,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,red,yel,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_random_thin_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+  #scale_fill_manual(values=c(red), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(red))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/TB_random_thin_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+  #scale_fill_manual(values=c(red), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(blu))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/SS_random_thin_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+  #scale_fill_manual(values=c(red), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(bla))+
+  scale_shape_manual(name = "year", values=c(22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_SS_random_thin_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
 
 ```
 

@@ -683,15 +683,6 @@ print(p)
 
 
 
-## Fst persite
-
-```{r}
-
-
-
-```
-
-
 
 ## Fst outliers and GO enrichment
 
