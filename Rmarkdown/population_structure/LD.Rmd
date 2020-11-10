@@ -329,12 +329,14 @@ thetas <- na.omit(thetas)
 p1 <- thetas %>% 
       gather(key="MesureType", value="Val") %>%
       ggplot( aes(x=reorder(MesureType,Val, FUN = median), y=Val, fill=MesureType)) +
-      geom_violin() + xlab("\npopulation/year") + ylab("pi\n")+
+      geom_violin() + xlab("\npopulation/year") + ylab("nucleotide diversity\n")+
       scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
       theme_minimal()
       #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
 
+png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/pi_angsd.png", height = 5, width = 7, units = 'in', res = 600)
 p1
+dev.off()
 
 ```
 

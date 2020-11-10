@@ -33,7 +33,8 @@ gry<-  '#BBBBBB'
 ```
 
 ## 1D SFS 
-```{python, echo = FALSE,results='hide'}
+```{python, echo = FALSE}
+#,results='hide'}
 
 import moments
 import math
@@ -52,7 +53,11 @@ with open('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/unfolded/popula
     nSites = sum(sfs[1:-1])
     ne = thetaW / 2.0e-9 / nSites / 4
     print(ne)
-    #print(nSites)
+    pi = fs.pi()
+    print(pi)
+    print(nSites)
+    print(pi/nSites)
+
 #f = open("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/unfolded/population_PWS91_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.sfs", "r")
 #print(f)
 #from numpy import loadtxt
