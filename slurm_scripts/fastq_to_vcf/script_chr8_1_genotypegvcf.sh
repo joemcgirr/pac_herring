@@ -2,9 +2,9 @@
 
 #SBATCH --job-name=chr8_1_genotypegvcf
 #SBATCH --mem=16G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e chr8_1_genotypegvcf_%A_%a.err 
-#SBATCH --time=06-00:00 
+#SBATCH --time=144:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
@@ -19,4 +19,4 @@ module load GATK/4.1.4.1
 gatk GenotypeGVCFs -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V gendb://chr8 -L chr8:1-15364778 -O raw_variants_chr8_1.vcf 
 
 
-#command to run: sbatch script_chr8_1_genotypegvcf.sh
+#run: sbatch script_chr8_1_genotypegvcf.sh

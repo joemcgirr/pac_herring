@@ -2,9 +2,9 @@
 
 #SBATCH --job-name=chr20_2_genotypegvcf
 #SBATCH --mem=16G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e chr20_2_genotypegvcf_%A_%a.err 
-#SBATCH --time=06-00:00 
+#SBATCH --time=144:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
@@ -19,4 +19,4 @@ module load GATK/4.1.4.1
 gatk GenotypeGVCFs -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V gendb://chr20 -L chr20:13347081-26694162 -O raw_variants_chr20_2.vcf 
 
 
-#command to run: sbatch script_chr20_2_genotypegvcf.sh
+#run: sbatch script_chr20_2_genotypegvcf.sh

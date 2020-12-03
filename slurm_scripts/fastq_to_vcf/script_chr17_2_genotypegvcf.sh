@@ -2,9 +2,9 @@
 
 #SBATCH --job-name=chr17_2_genotypegvcf
 #SBATCH --mem=16G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e chr17_2_genotypegvcf_%A_%a.err 
-#SBATCH --time=06-00:00 
+#SBATCH --time=144:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
@@ -19,4 +19,4 @@ module load GATK/4.1.4.1
 gatk GenotypeGVCFs -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V gendb://chr17 -L chr17:13784255-27568510 -O raw_variants_chr17_2.vcf 
 
 
-#command to run: sbatch script_chr17_2_genotypegvcf.sh
+#run: sbatch script_chr17_2_genotypegvcf.sh

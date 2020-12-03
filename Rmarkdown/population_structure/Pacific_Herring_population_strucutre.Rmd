@@ -8,6 +8,11 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
+
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install(version = "3.12")
+
 knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(tidyverse)
@@ -18,8 +23,10 @@ library(rnaturalearth)
 library(rnaturalearthdata)
 library(ggspatial)
 library(pophelper)
-#BiocManager::install("pophelper")
-
+library(rgeos)
+#BiocManager::install(c('magrittr', 'RcppArmadillo', 'rlang', 'tibble', 'vctrs', 'xfun'))
+#devtools::install_github('royfrancis/pophelper')
+#BiocManager::install("rgeos")
 
 # color-blind friendly 
 # Wong, B. Points of view: Color blindness. Nat Methods (2011).

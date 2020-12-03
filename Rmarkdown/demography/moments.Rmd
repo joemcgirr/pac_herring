@@ -15,7 +15,12 @@ library(reticulate)
 library(reshape2)
 library(plyranges)
 library(seqinr)
-#BiocManager::install("seqinr")
+#BiocManager::install("reticulate")
+
+# install moments for reticulate compatilbility
+# py_install("git+https://bitbucket.org/simongravel/moments.git", pip = TRUE)
+# py_install("matplotlib", pip = TRUE)
+
 
 
 # color-blind friendly 
@@ -32,7 +37,8 @@ gry<-  '#BBBBBB'
 
 ```
 
-## 1D SFS 
+
+# 1D SFS stats
 ```{python, echo = FALSE}
 #,results='hide'}
 
@@ -40,13 +46,17 @@ import moments
 import math
 fs = moments.Spectrum([88113,1222,132,445,285,176,41,20,73,276,192,68,50,23,3,2,47,50,0,0,362])
 
-with open('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/unfolded/population_PWS07_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.sfs') as data:
+sfs_file = 'C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/ld_pruned/sfs/SS17_folded.sfs'
+
+with open(sfs_file) as data:
     sfs = data.read().split()
     sfs = sfs[math.ceil(((len(sfs)/2)*0.05)+2):]
     sfs = [float(i) for i in sfs] 
     sfs = [round(num) for num in sfs]
     sfs = [0] + sfs
     fs = moments.Spectrum(sfs)
+    fs.mask[1:3]=True
+    print(fs)
     thetaW = fs.Watterson_theta()
     print(thetaW)
     #print(math.ceil(((len(sfs)/2)*0.05)+1))
@@ -69,8 +79,52 @@ with open('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/unfolded/popula
 
 ```
 
+```{python, echo = FALSE}
+
+import moments
+import math
+import pylab
+
+sfs_file = 'C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/ld_pruned/sfs/CA17_folded.sfs'
+sfs_file = 'C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/folded/population_CA17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.sfs'
+
+
+with open(sfs_file) as data:
+    sfs = data.read().split()
+    sfs = sfs[math.ceil(((len(sfs)/2)*0.05)+2):]
+    sfs = [float(i) for i in sfs] 
+    sfs = [round(num) for num in sfs]
+    sfs = [0] + sfs
+    fs = moments.Spectrum(sfs)
+    fs.mask[1:3]=True
+    print(fs)
+    #thetaW = fs.Watterson_theta()
+    #print(thetaW)
+    ##print(math.ceil(((len(sfs)/2)*0.05)+1))
+    nSites = sum(sfs[1:-1])
+    #ne = thetaW / 2.0e-9 / nSites / 4
+    #print(ne)
+    pi = fs.pi()
+    print(pi)
+    print(nSites)
+    print(pi/nSites)
+    #print(fs.sample_sizes[0])
+    #n = 135
+    #p = pylab.arange(0, n+1)/float(n)
+    #print(p)
+    #print(n / (n-1.0) * 2 * pylab.sum(fs * p*(1-p)))
+    #print(pylab.sum(fs.data))
+    #print(n / (n-1.0) * 2 * pylab.sum(fs * p*(1-p)) / pylab.sum(fs.data))
+    
+#
+```
+
+
+
+# Plot 1D SFS
 ```{r}
 sfs<-(scan(  'C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/folded/population_BC17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.sfs'))
+sfs<-(scan(  'C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/ld_pruned/sfs/SS17_folded.sfs'))
 
 #png("C:/Users/jmcgirr/Desktop/Fig_3.png", height = 5, width = 8, units = 'in', res = 300)
 
@@ -81,17 +135,18 @@ abline(v=(((length(sfs)/2)*0.05)+1), col = "red")
 
 ```
 
-## 2D SFS
+## 2D SFS stats and plot
 ```{python, echo = FALSE,results='hide'}
 
 import moments
 import matplotlib
-dd = moments.Misc.make_data_dict('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/2d_sfs_dadi/BC17_CA17_dadi_snp.data')
-fs = moments.Spectrum.from_data_dict(dd,pop_ids=[ 'BC17' , 'CA17'],projections=[16 , 16],polarized = True)
+dd = moments.Misc.make_data_dict('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/2d_sfs_dadi/folded/BC17_CA17_dadi_snp.data')
+fs = moments.Spectrum.from_data_dict(dd,pop_ids=[ 'pop0' , 'pop1'],projections=[30 , 30],polarized = True)
 S = fs.S()
 Fst = fs.Fst()
-moments.Plotting.plot_single_2d_sfs(fs, vmin =1)
-matplotlib.pyplot.savefig("my_plot") 
+print(Fst)
+#moments.Plotting.plot_single_2d_sfs(fs, vmin =1)
+#matplotlib.pyplot.savefig("my_plot") 
 
 
 ```
@@ -105,34 +160,53 @@ one population split into two pops with symmetrical migration
 # that effective size, we use the relationship θ = 4NeµL, where µ is the per-base mutation
 # rate, and L is length of sequence from which the SNPs came. So Ne = θ/4µL. 
 
-params <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/test/V1.sym_mig.optimized.txt")
+model_name <- "sym_mig_2_pop"
+pops <- "PWS17_SS17"
+pops <- "TB17_PWS17"
+
+
+for (i in c(1:5)){
+params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V1_Number_",i,".sym_mig.optimized.txt", sep = ""))
 params <- params[order(params$AIC),]
 head(params)
 params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
 
-boxplot(params$log.likelihood~params$round)
-
+#print(boxplot(params$log.likelihood~params$round))
+opt_params <- strsplit(params[1,8], ",")[[1]]
 print("optimized parameter set for empirical data:")
-print(params$optimized_params...[1])
+print(opt_params)
+print("theta")
+print(params$theta[1])
+
+}
+
+
+best <- 3
+  
+params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V3_Number_",best,".sym_mig.optimized.txt", sep = ""))
+params <- params[order(params$AIC),]
+params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
+#print(boxplot(params$log.likelihood~params$round))
+opt_params <- strsplit(params[1,8], ",")[[1]]
 
    # Split into two populations, with symmetric migration.
    # nu1: Size of population 1 after split.
    # nu2: Size of population 2 after split.
-   # T: Time in the past of split (in units of 2*Na generations) 
    # m: Migration rate between populations (2*Na*m)
-
-theta <- 2796.30
-nu1 <- 0.0614
-nu2 <- 0.1225
-m <- 24.8274
-t <- 0.0205
+   # T: Time in the past of split (in units of 2*Na generations) 
+   
+theta <- as.numeric(params$theta[1])
+nu1 <- as.numeric(opt_params[1])
+nu2 <- as.numeric(opt_params[2])
+m <- as.numeric(opt_params[3])
+t <- as.numeric(opt_params[4])
 
 # generation time
 g <- 4
 # atlantic herring mutation rate
 mu <- 2.0e-9
 
-L <- 10000     # number of snps analyzed
+#L <- 354549     # number of snps analyzed
 L <- 25176157  # total length analyzed
 # effective size of ancestral population
 Nref <- theta / (4* mu* L)
@@ -145,8 +219,14 @@ t*2*Nref*4
 ################### Goodness of Fit
 #Change the path to your output files, which will have names specific to the model you labeled
 #These are for the example output files provided:
-sim_data <- read.delim("/Users/dan/Dropbox/Goodness_of_Fit/Empirical/Simulation_Results.txt", header = TRUE, sep = "\t")
-emp_data <- read.delim("/Users/dan/Dropbox/Goodness_of_Fit/Empirical/Empirical.sym_mig.optimized.txt", header = TRUE, sep = "\t")
+
+model_name <- "sym_mig_2_pop"
+pops <- "PWS17_SS17"
+pops <- "TB17_PWS17"
+
+
+sim_data <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/Simulation_Results.txt", sep = ""), header = TRUE, sep = "\t")
+emp_data <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/Empirical.sym_mig.optimized.txt", sep = ""), header = TRUE, sep = "\t")
 
 #check headers
 ls(sim_data)
@@ -178,13 +258,13 @@ emp_data$chi.squared
 #likelihood plot
 #change the bin settings below
 ll_seq<- seq(-100,-20,2)
-hist(sim_data$log.likelihood, breaks=ll_seq, main = "Simulation Results - Log-likelihood distribution", xlab="log-likelihood", col="grey")
+hist(sim_data$log.likelihood, breaks=500, main = "Simulation Results - Log-likelihood distribution", xlab="log-likelihood", col="grey")
 abline(v=emp_data$log.likelihood, lwd = 3, col='blue')
 
 #chi-squared plot
 #change the bin settings below
 chi_seq<- seq(0,100,5)
-hist(sim_data$chi.squared, breaks=chi_seq, main = "Simulation Results - Chi-squared distribution ", xlab="Chi-squared test statistic", col="grey")
+hist(sim_data$chi.squared, breaks=100, main = "Simulation Results - Chi-squared distribution ", xlab="Chi-squared test statistic", col="grey")
 abline(v=emp_data$chi.squared, lwd = 3, col='blue')
 
 #####################################
@@ -207,8 +287,11 @@ abline(v=emp_log_chi, lwd = 3, col='blue')
 
 
 
+
+```{r, eval = FALSE}
+# not trusting thetaW output
+
 # Rough Ne estimate using waterson's theta
-```{r}
 
 # http://evomics.org/learning/population-and-speciation-genomics/2018-population-and-speciation-genomics/angsd-activity-sfs-fst-pbs/
 
@@ -238,31 +321,13 @@ ne_s <- c(ne_s, ne)
 
 
 
-https://github.com/z0on/AFS-analysis-with-moments
-http://computationalgenomics.bioinformatics.ucla.edu/portfolio/simon-gravel-inferring-demographic-history-using-moments-cgsi-2019/
-
-https://bitbucket.org/simongravel/moments/src/master/moments/
-
-https://dadi.readthedocs.io/en/latest/user-guide/importing-data/
-
-https://github.com/isaacovercast/easySFS
-
-```{python, echo = FALSE,results='hide'}
-import moments
-dd = moments.Misc.make_data_dict('C:/Users/jmcgirr/Desktop/2pops_dadi.data')
-fs = moments.Spectrum.from_data_dict(dd,pop_ids=[ 'pop0' , 'pop1'],projections=[16 , 16],polarized = True)
-S = fs.S()
-Fst = fs.Fst()
-moments.Plotting.plot_single_2d_sfs(fs, vmin =1)
-import matplotlib
-matplotlib.pyplot.savefig("C:/Users/jmcgirr/Desktop/my_plot2") 
-
-
-```
 
 
 
-```{r}
+
+
+
+```{r,eval=FALSE}
 #https://github.com/z0on/AFS-analysis-with-moments
 #http://computationalgenomics.bioinformatics.ucla.edu/portfolio/simon-gravel-inferring-demographic-history-using-moments-cgsi-2019/
 
@@ -280,7 +345,14 @@ matplotlib.pyplot.savefig("C:/Users/jmcgirr/Desktop/my_plot2")
 # autocorrelation and autocovariance
 #https://www.ssc.wisc.edu/~bhansen/390/390Lecture7.pdf
 
-```
+# https://github.com/z0on/AFS-analysis-with-moments
+# http://computationalgenomics.bioinformatics.ucla.edu/portfolio/simon-gravel-inferring-demographic-history-using-moments-cgsi-2019/
+
+# https://bitbucket.org/simongravel/moments/src/master/moments/
+
+# https://dadi.readthedocs.io/en/latest/user-guide/importing-data/
+
+# https://github.com/isaacovercast/easySFS
 
 
 #!/bin/bash
@@ -351,3 +423,7 @@ pi = fs.pi()
 thetaW = fs.Watterson_theta()
 
 #command to run: sbatch script_moments_test.sh
+
+```
+
+

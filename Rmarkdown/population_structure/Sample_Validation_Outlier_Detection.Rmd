@@ -541,7 +541,7 @@ plot(p1$plot[[1]])
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
 pop_names <- c("PWS","TB","SS","BC17","WA17","CA17")
-
+pop_name <- "PWS"
 for (pop_name in pop_names){
 pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020_plate_rows.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
@@ -553,7 +553,8 @@ vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
 chr <- "1"
 C <- as.matrix(read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/PCAngsd/chr",chr,"_",pop_name,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.cov", sep = "")))
 e <- eigen(C)
-pca <-data.frame(Sample=vcf_sample_info$Sample, 
+pca <-data.frame(Sample=vcf_sample_info$Sample,
+                 Location=vcf_sample_info$Location,
                  pop=vcf_sample_info$Population.Year,
                  plate=vcf_sample_info$Sequence.Plate,
                  plate_row=vcf_sample_info$plate_row,
@@ -588,6 +589,21 @@ pca1 <- pca
 #   #geom_text(aes(x = PC1, y = PC2), label = pca1$plate_row)+
 #   ggtitle(paste(pop_name," PC 1 and 2 chr 1\nplates 1-5 removed", sep = ""))
 # print(p1)
+p1 <- ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(bla,grb,org,red,yel,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c("white","white","white","white","white","white","white"))+
+  scale_shape_manual(name = "year", values=c(1,1,1,1,1))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  #xlim(0,0.17)+ylim(-0.05,0.1)+
+  #xlim(-0.05,-0.042)+ylim(-0.035,-0.025)+
+  #xlim(-0.055,-0.04)+ylim(-0.031,-0.025)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)+
+  geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle(paste(pop_name," PC 1 and 2 chr 1\nplates 1-5 removed", sep = ""))
+print(p1)
 p1 <- ggplot(data = pca1)+
   geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
   scale_fill_manual(values=c(bla,grb,org,red,yel,lir), guide=FALSE)+
