@@ -26,7 +26,7 @@ library(pophelper)
 library(rgeos)
 #BiocManager::install(c('magrittr', 'RcppArmadillo', 'rlang', 'tibble', 'vctrs', 'xfun'))
 #devtools::install_github('royfrancis/pophelper')
-#BiocManager::install("rgeos")
+#BiocManager::install("geiger")
 
 # color-blind friendly 
 # Wong, B. Points of view: Color blindness. Nat Methods (2011).

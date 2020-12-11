@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --job-name=trim_align_high_cov_ph
-#SBATCH --mem=32G 
+#SBATCH --mem=16G 
 #SBATCH --ntasks=4 
 #SBATCH -e trim_align_high_cov_ph_%A_%a.err 
-#SBATCH --time=72:00:00 
+#SBATCH --time=24:00:00  
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
@@ -29,4 +29,4 @@ samtools sort /home/jamcgirr/ph/data/hi_cov/PH_Sitka_93.bam -o /home/jamcgirr/ph
 samtools index /home/jamcgirr/ph/data/hi_cov/PH_Sitka_93.sort.bam
 
 
-#command to run: sbatch script_trim_align_high_cov_ph.sh
+#run: sbatch script_trim_align_high_cov_ph.sh
