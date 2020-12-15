@@ -42,7 +42,7 @@ gry<-  '#BBBBBB'
 
 ```
 
-## plot population locations
+# plot population locations
 ```{r,fig.width= 7, fig.height= 7}
 theme_set(theme_bw())
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -139,7 +139,8 @@ ggplot(data = ts)+
 
 ```
 
-## Population structure: PCA Chr 1 (~100k SNPs)  
+# Population structure
+## PCA Chr 1 (~100k SNPs)  
 Final VCF filter:  
   
 minimum depth = 600  
@@ -307,7 +308,7 @@ ggplot(data = pca1)+
 ```
 
 
-## Population structure: Admixture Chr 1 (~100k SNPs)
+## Admixture Chr 1 (~100k SNPs)
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
@@ -485,6 +486,12 @@ ggplot(data = dd)+
 
 
 ```
+
+# SFS
+```{r}
+
+```
+
 
 ## Pi and Tajima's D
 
