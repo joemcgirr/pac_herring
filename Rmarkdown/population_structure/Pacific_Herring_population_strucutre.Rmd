@@ -489,6 +489,17 @@ ggplot(data = dd)+
 
 # SFS
 ```{r}
+# using SFS from angsd -dosaf -bam
+sfs <- read.table("C:/Users/jmcgirr/Desktop/BC17_minQ20_minMQ30_folded.sfs", header = FALSE, stringsAsFactors = FALSE)
+sfs
+sfs <- as.vector(colSums(sfs))
+barplot(sfs[-c(1,length(sfs))]) #plot variable sites 
+write.table(t(sfs),"C:/Users/jmcgirr/Desktop/BC17_minQ20_minMQ30_folded_merged.sfs", quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+# https://github.com/ANGSD/angsd/issues/97
+
+# using SFS from angsd -dosaf -vcf-pl
+
 
 ```
 
