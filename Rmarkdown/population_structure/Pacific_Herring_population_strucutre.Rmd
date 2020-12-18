@@ -529,17 +529,18 @@ write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/down
 # plot(chr1$WinCenter, chr1$Tajima)
 # plot(chr1$WinCenter, chr1$pi)
 
-pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
-pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
+pop_names <- c("CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
 
-pop <- "PWS91"
-thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+pop <- "BC17"
+#thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/thetas/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
 thetas <- thetas[c("Tajima")]
 names(thetas)[names(thetas)=="Tajima"] <- pop
 
 for (pop in pop_names){
 
-thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/thetas/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
 thetas1[c("Chr","WinCenter","Tajima")]
 thetas$Tajima <- thetas1$Tajima
 names(thetas)[names(thetas)=="Tajima"] <- pop 
@@ -567,8 +568,8 @@ p1
 #https://github.com/ANGSD/angsd/issues/329#issuecomment-681005380
 # pi
 
-pop <- "PWS91"
-thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+pop <- "BC17"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/thetas/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
 #thetas$pi<- (thetas$tP*thetas$nSites)/10000
 thetas$pi<- thetas$tP/thetas$nSites
 #thetas$pi<- thetas$tP/50000
@@ -577,7 +578,7 @@ names(thetas)[names(thetas)=="pi"] <- pop
 
 for (pop in pop_names){
 
-thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
+thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/thetas/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
 #thetas1$pi<- (thetas1$tP*thetas1$nSites)/10000
 thetas1$pi<- thetas1$tP/thetas1$nSites
 thetas1[c("Chr","WinCenter","pi")]
@@ -604,7 +605,7 @@ p1
 
 ### vcftools just to get a sense with hard calls since angsd values are stupid high
 #pi_50kb_win_BC17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.txt.windowed
-pop <- "PWS91"
+pop <- "BC17"
 thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/vcftools/pi_50kb_win_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.txt.windowed.pi',sep = ""))
 #thetas$pi<- (thetas$tP*thetas$nSites)/10000
 #thetas$pi<- thetas$tP/thetas$nSites
