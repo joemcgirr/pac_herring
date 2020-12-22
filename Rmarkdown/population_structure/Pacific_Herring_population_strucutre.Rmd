@@ -491,18 +491,16 @@ ggplot(data = dd)+
 ```{r}
 # using SFS from angsd -dosaf -bam
 
-pop_names <-  c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
-
-pop_names <-  c("BC17","CA17","PWS17","PWS91","PWS96","SS06","SS17")
+pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
 
 #pop_name <- "BC17"
 
 for (pop_name in pop_names){
-sfs <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/unfolded/chunks/",pop_name,"_minQ20_minMQ30_unfolded.sfs",sep = ""), header = FALSE, stringsAsFactors = FALSE)
+sfs <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/folded/chunks/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), header = FALSE, stringsAsFactors = FALSE)
 sfs
 sfs <- as.vector(colSums(sfs))
 barplot(sfs[-c(1,length(sfs))]) #plot variable sites 
-write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/unfolded/",pop_name,"_minQ20_minMQ30_unfolded.sfs",sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
+write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/folded/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
 }
 
 # https://github.com/ANGSD/angsd/issues/97
