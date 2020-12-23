@@ -9,7 +9,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/downsample/saf/BC17_minQ20_minMQ30.saf.idx /home/jamcgirr/ph/data/angsd/SFS/downsample/saf/CA17_minQ20_minMQ30.saf.idx -fold 1 -P 8 -nSites 100000000 > /home/jamcgirr/ph/data/angsd/SFS/downsample/fst/folded/BC17_CA17_folded_chunks.sfs 
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/downsample/saf/BC17_minQ20_minMQ30.saf.idx /home/jamcgirr/ph/data/angsd/SFS/downsample/saf/CA17_minQ20_minMQ30.saf.idx -fold 1 -P 8 -nSites 50000000 > /home/jamcgirr/ph/data/angsd/SFS/downsample/fst/folded/BC17_CA17_folded_chunks.sfs 
 
 
 #run: sbatch script_fst_test_chunks.sh
