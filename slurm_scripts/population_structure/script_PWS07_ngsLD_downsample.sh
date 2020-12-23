@@ -23,11 +23,14 @@
 #cp /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.geno.gz /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/
 #gzip -d /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_minQ20_minMQ30.geno.gz
 #awk '{ print $1,$2 }' /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_minQ20_minMQ30.geno > /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1.pos.txt
-sed 's/ /\t/g' /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1.pos.txt > /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_tab.pos.txt
+#sed 's/ /\t/g' /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1.pos.txt > /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_tab.pos.txt
 # 1 min
 
-/home/jamcgirr/apps/ngsLD/ngsLD --geno /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.geno.gz --n_ind 41 --max_kb_dist 5 --n_sites 26520291 --rnd_sample 0.01 --n_threads 8 --pos /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_tab.pos.txt --out /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_ld.txt 
-#wrong POS format error
+#/home/jamcgirr/apps/ngsLD/ngsLD --geno /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.geno.gz --n_ind 41 --max_kb_dist 5 --n_sites 26520291 --rnd_sample 0.01 --n_threads 8 --pos /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_tab.pos.txt --out /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_ld.txt 
+#this worked! no need for beagle output
+
+perl /home/jamcgirr/apps/ngsLD/scripts/prune_graph.pl --in_file /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_ld.txt --max_kb_dist 5 --min_weight 0.5 --out /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_unlinked.txt
+
 
 # beagle file
 #cp /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.beagle.gz /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/
