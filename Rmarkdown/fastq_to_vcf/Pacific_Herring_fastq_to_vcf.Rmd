@@ -4,7 +4,7 @@ author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
   html_document:
-    code_folding: show
+    code_folding: hide
     collapsed: no
     df_print: paged
     number_sections: yes
@@ -19,6 +19,10 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
 # Summary
 This notebook results from an R markdown file that generates scripts to create a `.vcf` file for 1000+ Pacific herring samples (low coverage whole genomes). The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
@@ -30,7 +34,7 @@ Data info: `fastq`, `bam`, and `.vcf` files are currently located on the Farm se
 
 
 # Load R libraries and set color palette 
-```{r setup,message=FALSE, warning=FALSE}
+```{r setup,message=FALSE, warning=FALSE,class.source = 'fold-show'}
 knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(tidyverse)
@@ -52,7 +56,7 @@ gry<-  '#BBBBBB'
 ```
 
 # Load python libraries
-```{python, results='hide', eval = FALSE}
+```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
 import io
 import pandas as pd
 import numpy as np
@@ -89,7 +93,7 @@ def sbatch_header_loop(job,mem,tasks,hours,infile):
 Trim `.fastq`, align with bwa mem, and index `.bam` with samtools
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 
 #!/bin/bash
 
@@ -160,7 +164,7 @@ o.close()
 use picard-tools to generate `.bam` metrics
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=00_CollectWgsMetrics
@@ -320,7 +324,7 @@ an <- aov(pop_info_bams$PCT_1X~factor(pop_info_bams$Location))
 use gatk GenomicsDBImport
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=chr2_make_db
@@ -404,7 +408,7 @@ for infile in infiles:
 use gatk GenotypeGVCFs
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=chr1_1_genotypegvcf
@@ -491,7 +495,7 @@ maf = 5%
 minimum mapping quality = 30 
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=chr1_filter_gvcf
@@ -576,7 +580,7 @@ for infile in infiles:
 ## Plot SNP stats for first half of Chr 1
 1,073,808 SNPs across 16,542,120 bp
 
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 snps <- read.table("C:/Users/jmcgirr/Documents/GitHub/pac_herring/slurm_scripts/fastq_to_vcf/combine_gvcfs/chr1_1_out.INFO", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 
 # GATK Hard filters
@@ -654,7 +658,7 @@ outfile_name <- paste("population_",pop1$Population.Year[1],".txt", sep = "")
 use bcftools concat
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=merge_snp_vcfs
@@ -703,7 +707,7 @@ outfile.close()
 use vcftools and bcftools
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=BC17_subset_snps_by_pop
@@ -767,7 +771,7 @@ ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_maxmiss0.5.vcf
 output plink and beagle format
 
 example script
-```{bash,eval=FALSE}
+```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
 #SBATCH --job-name=merge_filtered_pops

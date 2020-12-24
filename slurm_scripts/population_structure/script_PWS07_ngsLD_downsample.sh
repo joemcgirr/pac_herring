@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=PWS07_ngsLD_downsample
-#SBATCH --mem=60G 
+#SBATCH --mem=30G 
 #SBATCH --ntasks=8 
 #SBATCH -e PWS07_ngsLD_downsample_%A_%a.err 
 #SBATCH --time=24:00:00 
@@ -29,8 +29,12 @@
 #/home/jamcgirr/apps/ngsLD/ngsLD --geno /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.geno.gz --n_ind 41 --max_kb_dist 5 --n_sites 26520291 --rnd_sample 0.01 --n_threads 8 --pos /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/PWS07_chr1_tab.pos.txt --out /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_ld.txt 
 #this worked! no need for beagle output
 
+# now just need to get the fucking perl script to work
+module load perl/5.18.4
 perl /home/jamcgirr/apps/ngsLD/scripts/prune_graph.pl --in_file /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_ld.txt --max_kb_dist 5 --min_weight 0.5 --out /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_unlinked.txt
 
+
+perl -MCPAN -Mlocal::lib -e 'CPAN::install(Graph::Easy)'
 
 # beagle file
 #cp /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.beagle.gz /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/
