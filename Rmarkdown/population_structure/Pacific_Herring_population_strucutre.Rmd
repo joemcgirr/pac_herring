@@ -42,7 +42,7 @@ gry<-  '#BBBBBB'
 
 ```
 
-# plot population locations
+# Plot population locations
 ```{r,fig.width= 7, fig.height= 7}
 theme_set(theme_bw())
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -500,7 +500,7 @@ sfs <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downs
 sfs
 sfs <- as.vector(colSums(sfs))
 barplot(sfs[-c(1,length(sfs))]) #plot variable sites 
-write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/folded/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
+#write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/folded/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
 }
 
 # https://github.com/ANGSD/angsd/issues/97

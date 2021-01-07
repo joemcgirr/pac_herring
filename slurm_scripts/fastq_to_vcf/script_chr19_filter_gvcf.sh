@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=chr19_filter_gvcf
 #SBATCH --mem=8G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e chr19_filter_gvcf_%A_%a.err 
 #SBATCH --time=24:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
@@ -30,8 +30,8 @@ bcftools filter -Oz -i 'MQ>30' /home/jamcgirr/ph/data/combine_gvcfs/filtered_snp
 bcftools index /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr19_1.recode.vcf.gz 
 bcftools index /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr19_2.recode.vcf.gz 
 
-rm /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr19_1_delete.recode.vcf 
-rm /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr19_2_delete.recode.vcf 
+#rm /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr19_1_delete.recode.vcf 
+#rm /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr19_2_delete.recode.vcf 
 
 
-#command to run: sbatch script_chr19_filter_gvcf.sh
+#run: sbatch script_chr19_filter_gvcf.sh
