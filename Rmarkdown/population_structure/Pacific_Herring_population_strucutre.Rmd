@@ -1,8 +1,20 @@
 ---
 title: "Pacific Herring Population Structure"
 author: "Joe McGirr"
-date: "9/1/2020"
-output: html_document
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: no
+    df_print: paged
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_depth: 5
 editor_options: 
   chunk_output_type: console
 ---
@@ -24,6 +36,8 @@ library(rnaturalearthdata)
 library(ggspatial)
 library(pophelper)
 library(rgeos)
+library(data.table)
+
 #BiocManager::install(c('magrittr', 'RcppArmadillo', 'rlang', 'tibble', 'vctrs', 'xfun'))
 #devtools::install_github('royfrancis/pophelper')
 #BiocManager::install("geiger")
@@ -39,6 +53,58 @@ red <- "#d55e00"
 org <- "#e69f00"
 yel <- "#f0e442"
 gry<-  '#BBBBBB'
+
+```
+
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
+# Summary
+This notebook generates scripts to perform population structure analyses with [PCAngsd](http://www.popgen.dk/software/index.php/PCAngsd),
+[PLINK PCA](https://www.cog-genomics.org/plink/1.9/strat), [NGSadmix](http://www.popgen.dk/software/index.php/NgsAdmix), and [popVAE](https://github.com/kr-colab/popvae).
+
+The data set is a filtered `.vcf` with >800 Pacific herring low coverage genomes:
+
+minimum depth = 600  
+maximum depth = 2000  
+minimum base quality = 20  
+minimum mapping quality = 30  
+minor allele frequency >= 5%  
+genotyping rate >= 50% for each population (grouped by samping location and year)  
+
+##### Load python libraries
+```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
+import io
+import pandas as pd
+import numpy as np
+
+def sbatch_header(job,mem,tasks,hours):
+    #sbatch submission script header
+    script = 'script_' + job + '.sh'
+    outfile = io.open(script,'w', newline='\n')    
+    outfile.write('#!/bin/bash\n\n#SBATCH --job-name='+job+'\n')
+    outfile.write('#SBATCH --mem='+mem+'G \n')
+    outfile.write('#SBATCH --ntasks='+tasks+' \n')
+    outfile.write('#SBATCH -e '+job+'_%A_%a.err \n')
+    outfile.write('#SBATCH --time='+hours+':00:00  \n')
+    outfile.write('#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc\n#SBATCH --mail-type=ALL\n')
+    outfile.write('#SBATCH -p high \n\n')
+    outfile.close()
+    
+def sbatch_header_loop(job,mem,tasks,hours,infile):
+    #sbatch submission script header
+    script = 'script_' + infile + job + '.sh'
+    outfile = io.open(script,'w', newline='\n') 
+    jobname= infile + job   
+    outfile.write('#!/bin/bash\n\n#SBATCH --job-name='+jobname+'\n')
+    outfile.write('#SBATCH --mem='+mem+'G \n')
+    outfile.write('#SBATCH --ntasks='+tasks+' \n')
+    outfile.write('#SBATCH -e '+jobname+'_%A_%a.err \n')
+    outfile.write('#SBATCH --time='+hours+':00:00 \n')
+    outfile.write('#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc\n#SBATCH --mail-type=ALL\n')
+    outfile.write('#SBATCH -p high \n\n')
+    outfile.close()
 
 ```
 
@@ -105,53 +171,58 @@ p1
 
 ```
 
+# Population structure
+## PCAngsd
 
-## Plot population survey: time series
-data from The highs and lows of herring: A meta-analysis of patterns and factors in herring collapse and recovery  
-DOI:10.1111/faf.12452
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
 
-```{r}
-#time series data
-ts <- read.csv("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/population_surveys/herring_data_Trochta_2020.csv", header = TRUE, stringsAsFactors = FALSE)
-ts <- ts %>% filter(species == "Pacific herring")
-#head(ts)
-ts1 <- ts %>% 
-  group_by(mainname) %>%
-  mutate(quant_90 = quantile(biomass,.90)) %>%
-  filter(biomass >= quant_90) %>%
-  mutate(mean_quant_90= mean(biomass)) %>% as.data.frame()
-pws <- ts %>% filter(mainname == "Prince William Sound") %>%
-       mutate(normalized_biomass = biomass/103122.55)%>% as.data.frame()
-bc <- ts %>% filter(mainname == "British Columbia") %>%
-       mutate(normalized_biomass = biomass/6406.96) %>% as.data.frame()
-ts <- rbind(pws,bc)
+#!/bin/bash
 
-ggplot(data = ts)+
-  geom_point(data = ts, aes(x = year, y = normalized_biomass, color = mainname), size = 2)+
-  scale_color_manual(name = "population",values=c(grb,red))+
-  xlab("year") + ylab("normalized biomass\n")+theme_bw()
+#SBATCH --job-name=PCAngsd
+#SBATCH --mem=16G 
+#SBATCH --ntasks=4 
+#SBATCH -e PCAngsd_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
 
-#ggplot(data = ts)+
-#geom_point(data = ts, aes(x = year, y = recruits, color = mainname))
-#ggplot(data = ts)+
-#geom_point(data = ts, aes(x = year, y = catches, color = mainname))
+module load pcangsd 
+gzip /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL 
+python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/chr2_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -threads 4 
 
+#command to run: sbatch script_PCAngsd.sh
+```
+
+### Generate PCAngsd scripts
+
+```{python,results='hide', eval = FALSE}
+job_name = 'PCAngsd'
+
+#git clone https://github.com/Rosemeis/pcangsd.git
+#cd pcangsd/\n')
+#python setup.py build_ext --inplace
+
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
+
+sbatch_header(job_name,'16','4','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('module load pcangsd \n')
+o.write('#gzip /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL \n')
+
+o.write('#python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/chr2_'+vcf_name+'.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/chr1_'+vcf_name+' -threads 4 \n')
+
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
 
 ```
 
-# Population structure
-## PCA Chr 1 (~100k SNPs)  
-Final VCF filter:  
-  
-minimum depth = 600  
-maximum depth = 2000  
-minimum base quality = 20  
-minimum mapping quality = 30  
-minor allele frequency >= 5%  
-genotyping rate >= 50% for each population (grouped by samping location and year)  
-
-
-
+### Plot
+PCA for  Chr 1 (~100k SNPs)  
 ```{r}
 pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020_plate_rows.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
@@ -267,11 +338,57 @@ ggplot(data = pca1)+
 
 ```
 
+## PLINK PCA
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=plink_PCA
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e plink_PCA_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load plink 
+plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 --pca --out /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5
+
+
+#command to run: sbatch script_plink_PCA.sh
+```
+
+### Generate PLINK PCA scripts
+```{python,results='hide', eval = FALSE}
+job_name = 'plink_PCA'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
+#vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5'
+
+sbatch_header(job_name,'8','4','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('module load plink \n')
+o.write('plink --file /home/jamcgirr/ph/data/vcfs/'+vcf_name+' --pca --out /home/jamcgirr/ph/data/plink/'+vcf_name+'\n') 
+
+
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+```
+
+### Plot
+Genome-wide PCA (~3 million SNPs)
+
 ```{r, echo = FALSE,results='hide'}
 # PLINK pca
 
- eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.eigenvec", header=F, stringsAsFactors = F)
- eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.eigenval", header=F, stringsAsFactors = F)
+ eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenvec", header=F, stringsAsFactors = F)
+ eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenval", header=F, stringsAsFactors = F)
  names(eigenvec)[names(eigenvec)=="V1"] <- "Sample"
  vcf_sample_info <- inner_join(eigenvec,pop_info, by = "Sample")
  
@@ -308,7 +425,53 @@ ggplot(data = pca1)+
 ```
 
 
-## Admixture Chr 1 (~100k SNPs)
+## NGSAdmix
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=NGSadmix
+#SBATCH --mem=8G 
+#SBATCH --ntasks=1 
+#SBATCH -e NGSadmix_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load angsd 
+NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -K 2 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k2_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -P 4 
+NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -K 3 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k3_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -P 4 
+NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -K 4 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k4_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -P 4 
+
+
+#command to run: sbatch script_NGSadmix.sh
+```
+
+### Generate NGSAdmix scripts
+```{python,results='hide', eval = FALSE}
+job_name = 'NGSadmix'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
+
+sbatch_header(job_name,'8','1','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+o.write('module load angsd \n')
+o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL.gz -K 2 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k2_chr1_'+vcf_name+' -P 4 \n')
+o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL.gz -K 3 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k3_chr1_'+vcf_name+' -P 4 \n')
+o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL.gz -K 4 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k4_chr1_'+vcf_name+' -P 4 \n')
+
+
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+```
+
+### Plot
+Admixture Chr 1 (~100k SNPs)
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
@@ -367,9 +530,64 @@ plot(p1$plot[[1]])
 ```
 
 ## Popvae
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=popvae_PWS_SS
+#SBATCH --mem=32G 
+#SBATCH --ntasks=4 
+#SBATCH -e popvae_PWS_SS_%A_%a.err 
+#SBATCH --time=72:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load samtools 
+module load bcftools 
+cat /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS91_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS07_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS06_bams_p_1_5_rm.txt > /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt 
+sed -i 's/\/home\/eoziolor\/phpopg\/data\/align\///g' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt 
+sed -i 's/.bam//g' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt 
+bcftools view -S /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt -Oz /home/jamcgirr/ph/data/vcfs/vince/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.vcf.gz -R /home/jamcgirr/ph/data/moments/ld_prune/random_thin_keep.txt --threads 4 > /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz 
+source /home/jamcgirr/apps/my_python3.7/bin/activate 
+popvae.py --infile /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz --out /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin --seed 42 
+
+
+#run: sbatch script_popvae_PWS_SS.sh
+```
+
+### Generate popVAE scripts
+```{python,results='hide', eval = FALSE}
+job_name = 'popvae_PWS_SS'
+
+sbatch_header(job_name,'32','4','72')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')  
+   
+    
+o.write('module load samtools \n')
+o.write('module load bcftools \n')
+o.write('cat /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS91_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS07_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS06_bams_p_1_5_rm.txt > /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt \n')
+o.write('sed -i \'s/\/home\/eoziolor\/phpopg\/data\/align\///g\' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt \n')
+o.write('sed -i \'s/.bam//g\' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt \n')
+
+o.write('bcftools view -S /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt -Oz /home/jamcgirr/ph/data/vcfs/vince/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.vcf.gz -R /home/jamcgirr/ph/data/moments/ld_prune/random_thin_keep.txt --threads 4 > /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz \n')
+o.write('source /home/jamcgirr/apps/my_python3.7/bin/activate \n')
+o.write('popvae.py --infile /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz --out /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin --seed 42 \n')
+
+
+o.write('\n\n#run: sbatch '+script)
+o.close()
+
+
+```
+
+### Plot
+Genome-wide structure (~3 million SNPSs)
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-library(ggplot2);library(data.table)
 #theme_set(theme_classic())
 
 pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
@@ -488,5 +706,42 @@ ggplot(data = dd)+
 ```
 
 
+
+
+
+
+```{r, include = FALSE, eval = FALSE}
+
+## Plot population survey: time series
+# data from The highs and lows of herring: A meta-analysis of patterns and factors in herring collapse and  recovery  
+# DOI:10.1111/faf.12452
+
+#time series data
+ts <- read.csv("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/population_surveys/herring_data_Trochta_2020.csv", header = TRUE, stringsAsFactors = FALSE)
+ts <- ts %>% filter(species == "Pacific herring")
+#head(ts)
+ts1 <- ts %>% 
+  group_by(mainname) %>%
+  mutate(quant_90 = quantile(biomass,.90)) %>%
+  filter(biomass >= quant_90) %>%
+  mutate(mean_quant_90= mean(biomass)) %>% as.data.frame()
+pws <- ts %>% filter(mainname == "Prince William Sound") %>%
+       mutate(normalized_biomass = biomass/103122.55)%>% as.data.frame()
+bc <- ts %>% filter(mainname == "British Columbia") %>%
+       mutate(normalized_biomass = biomass/6406.96) %>% as.data.frame()
+ts <- rbind(pws,bc)
+
+ggplot(data = ts)+
+  geom_point(data = ts, aes(x = year, y = normalized_biomass, color = mainname), size = 2)+
+  scale_color_manual(name = "population",values=c(grb,red))+
+  xlab("year") + ylab("normalized biomass\n")+theme_bw()
+
+#ggplot(data = ts)+
+#geom_point(data = ts, aes(x = year, y = recruits, color = mainname))
+#ggplot(data = ts)+
+#geom_point(data = ts, aes(x = year, y = catches, color = mainname))
+
+
+```
 
 

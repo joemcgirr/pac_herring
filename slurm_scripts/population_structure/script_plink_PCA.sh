@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=plink_PCA
-#SBATCH --mem=16G 
+#SBATCH --mem=8G 
 #SBATCH --ntasks=4 
 #SBATCH -e plink_PCA_%A_%a.err 
 #SBATCH --time=24:00:00  
