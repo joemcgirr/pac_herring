@@ -19,7 +19,28 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
+
+
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
+# Summary
+This notebook generates scripts to perform population structure analyses with [PCAngsd](http://www.popgen.dk/software/index.php/PCAngsd),
+[PLINK PCA](https://www.cog-genomics.org/plink/1.9/strat), [NGSadmix](http://www.popgen.dk/software/index.php/NgsAdmix), and [popVAE](https://github.com/kr-colab/popvae).
+
+The data set is a filtered `.vcf` with >800 Pacific herring low coverage genomes:
+
+minimum depth = 600  
+maximum depth = 2000  
+minimum base quality = 20  
+minimum mapping quality = 30  
+minor allele frequency > 5%  
+genotyping rate > 50% for each population (grouped by samping location and year)  
+
+
+* Load R libraries
+```{r setup, include=TRUE}
 
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #     install.packages("BiocManager")
@@ -56,28 +77,12 @@ gry<-  '#BBBBBB'
 
 ```
 
-```{css, echo=FALSE}
-pre, code {white-space:pre !important; overflow-x:auto}
-```
-
-# Summary
-This notebook generates scripts to perform population structure analyses with [PCAngsd](http://www.popgen.dk/software/index.php/PCAngsd),
-[PLINK PCA](https://www.cog-genomics.org/plink/1.9/strat), [NGSadmix](http://www.popgen.dk/software/index.php/NgsAdmix), and [popVAE](https://github.com/kr-colab/popvae).
-
-The data set is a filtered `.vcf` with >800 Pacific herring low coverage genomes:
-
-minimum depth = 600  
-maximum depth = 2000  
-minimum base quality = 20  
-minimum mapping quality = 30  
-minor allele frequency >= 5%  
-genotyping rate >= 50% for each population (grouped by samping location and year)  
-
-##### Load python libraries
+* Load python libraries
 ```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
 import io
 import pandas as pd
 import numpy as np
+import math
 
 def sbatch_header(job,mem,tasks,hours):
     #sbatch submission script header
@@ -387,8 +392,12 @@ Genome-wide PCA (~3 million SNPs)
 ```{r, echo = FALSE,results='hide'}
 # PLINK pca
 
- eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenvec", header=F, stringsAsFactors = F)
- eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenval", header=F, stringsAsFactors = F)
+eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenvec", header=F, stringsAsFactors = F)
+eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenval", header=F, stringsAsFactors = F)
+
+eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.01.eigenvec", header=F, stringsAsFactors = F)
+eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.01.eigenval", header=F, stringsAsFactors = F)
+
  names(eigenvec)[names(eigenvec)=="V1"] <- "Sample"
  vcf_sample_info <- inner_join(eigenvec,pop_info, by = "Sample")
  

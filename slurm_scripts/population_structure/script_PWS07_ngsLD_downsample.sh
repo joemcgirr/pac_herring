@@ -4,7 +4,7 @@
 #SBATCH --mem=30G 
 #SBATCH --ntasks=8 
 #SBATCH -e PWS07_ngsLD_downsample_%A_%a.err 
-#SBATCH --time=24:00:00 
+#SBATCH --time=144:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
@@ -30,11 +30,24 @@
 #this worked! no need for beagle output
 
 # now just need to get the fucking perl script to work
-module load perl/5.18.4
 perl /home/jamcgirr/apps/ngsLD/scripts/prune_graph.pl --in_file /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_ld.txt --max_kb_dist 5 --min_weight 0.5 --out /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30_unlinked.txt
 
 
-perl -MCPAN -Mlocal::lib -e 'CPAN::install(Graph::Easy)'
+
+
+
+
+
+
+
+
+# perl -MCPAN -Mlocal::lib -e 'CPAN::install(Graph::Easy)'
+# 
+# cpanm Graph::Easy
+# 
+# module load perl
+# setenv PATH /home/jamcgirr/perl5/bin:$PATH
+# setenv PERL5LIB /home/jamcgirr/perl5/lib/perl5/x86_64-linux-thread-multi:/home/jamcgirr/perl5/lib/perl5:$PERL5LIB
 
 # beagle file
 #cp /home/jamcgirr/ph/data/angsd/ngsLD/downsample/PWS07_chr1_minQ20_minMQ30.beagle.gz /home/jamcgirr/ph/data/angsd/ngsLD/downsample/unzipped/

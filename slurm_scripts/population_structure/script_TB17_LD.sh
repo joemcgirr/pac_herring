@@ -10,10 +10,10 @@
 #SBATCH -p high 
 
 module load vcftools 
-vcftools --vcf /home/jamcgirr/ph/data/vcfs/split_pops/population_TB17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.vcf --plink --out /home/jamcgirr/ph/data/plink/population_TB17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm 
+vcftools --gzvcf /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_TB17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --plink --out /home/jamcgirr/ph/data/plink/population_TB17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 
 
 module load plink 
-plink --file /home/jamcgirr/ph/data/plink/population_TB17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/population_TB17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm --threads 4 
+plink --file /home/jamcgirr/ph/data/plink/population_TB17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/population_TB17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_indep_pairwise_100_10_0.8 --threads 4 
 
 
 #command to run: sbatch script_TB17_LD.sh

@@ -9,11 +9,8 @@
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load samtools 
 module load bcftools 
-bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/SS96_plates_1_through_5_rm.txt -O z /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf > /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_snps.vcf.gz 
-module load vcftools 
-vcftools --gzvcf /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_snps.vcf.gz --max-missing 0.5 --recode-INFO-all --recode --stdout | bgzip -c > /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz 
+bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/SS96_plates_1_through_5_rm.txt /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf | bcftools +fill-tags -- -t all,'DP=sum(DP)' | bcftools filter -Oz -i 'NS>39 ' > /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz 
 bcftools index /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz 
 
 

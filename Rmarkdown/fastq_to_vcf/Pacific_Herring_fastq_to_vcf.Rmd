@@ -60,6 +60,7 @@ gry<-  '#BBBBBB'
 import io
 import pandas as pd
 import numpy as np
+import math
 
 def sbatch_header(job,mem,tasks,hours):
     #sbatch submission script header
@@ -245,6 +246,7 @@ for (sample_name in pop_info$Sample[2:(length(pop_info$Sample))])
   
 }
 ```
+
 ### Compare by year collected
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
@@ -363,6 +365,7 @@ sbatch script_chr2_2_genotypegvcf.sh
 
 #run: sbatch script_chr2_make_db.sh
 ```
+
 ### Generate database scripts
 ```{python,results='hide', eval = FALSE}
 job_name = '_make_db'
@@ -432,6 +435,7 @@ gatk GenotypeGVCFs -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V gendb:/
 
 #run: sbatch script_chr1_1_genotypegvcf.sh
 ```
+
 ### Generate database scripts
 
 ```{python,results='hide', eval = FALSE}
@@ -486,12 +490,12 @@ for infile in infiles:
 ```
 
 
-## Create `.vcf` with SNPs only and filter SNPs
+## Create `.vcf` with biallelic SNPs and filter by depth and quality
 use gatk SelectVariants and bcftools filter
 
 minimum DP = 600
 maximum DP = 2000
-maf = 5%
+minimum quality score = 20 
 minimum mapping quality = 30 
 
 example script
@@ -500,37 +504,28 @@ example script
 
 #SBATCH --job-name=chr1_filter_gvcf
 #SBATCH --mem=8G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e chr1_filter_gvcf_%A_%a.err 
 #SBATCH --time=24:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load R 
-module load maven 
-module load java 
-module load GATK/4.1.4.1
-module load vcftools 
- 
-gatk SelectVariants -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_chr1_1.vcf --select-type-to-include SNP -O /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_chr1_1.vcf 
-vcftools --vcf /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_chr1_1.vcf --remove-indels --maf 0.05 --min-alleles 2 --max-alleles 2 --minQ 30 --minDP 600 --maxDP 2000 --recode --recode-INFO-all --out /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_1 
-
-gatk SelectVariants -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_chr1_2.vcf --select-type-to-include SNP -O /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_chr1_2.vcf 
-vcftools --vcf /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_chr1_2.vcf --remove-indels --maf 0.05 --min-alleles 2 --max-alleles 2 --minQ 30 --minDP 600 --maxDP 2000 --recode --recode-INFO-all --out /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_2 
-
 module load samtools 
 module load bcftools 
 
-bgzip -c /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_1.recode.vcf > /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_1.recode.vcf.gz 
-bgzip -c /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_2.recode.vcf > /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_2.recode.vcf.gz 
+bcftools view -S /home/jamcgirr/ph/data/combine_gvcfs/plates_1_through_5_rm.txt -m2 -M2 -v snps /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_chr1_1.vcf | bcftools +fill-tags -- -t all,'DP=sum(DP)' | bcftools filter -Oz -i 'MQ>30 && QUAL>20 && INFO/DP>600 && INFO/DP<2000' -o /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_1.recode.vcf.gz 
+bcftools view -S /home/jamcgirr/ph/data/combine_gvcfs/plates_1_through_5_rm.txt -m2 -M2 -v snps /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_chr1_2.vcf | bcftools +fill-tags -- -t all,'DP=sum(DP)' | bcftools filter -Oz -i 'MQ>30 && QUAL>20 && INFO/DP>600 && INFO/DP<2000' -o /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_2.recode.vcf.gz 
+
 bcftools index /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_1.recode.vcf.gz 
 bcftools index /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_chr1_2.recode.vcf.gz 
 
 
+
 #run: sbatch script_chr1_filter_gvcf.sh
 ```
-### Generate SelectVariants scripts
+
+### Generate bcftools filter scripts
 ```{python,results='hide', eval = FALSE}
 job_name = '_filter_gvcf'
 infiles = ["chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22","chr23","chr24","chr25","chr26"]
@@ -539,42 +534,21 @@ for infile in infiles:
     script = 'script_' + infile + job_name + '.sh'
     sbatch_header_loop(job_name,'8','4','24', infile)
     o = io.open(script,'a+', newline='\n')
-        
-        
-    o.write('module load R \n')
-    o.write('module load maven \n')
-    o.write('module load java \n')
-    o.write('module load GATK/4.1.4.1 \n\n')
-
-    o.write('#gatk SelectVariants -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_'+infile+'_1.vcf --select-type-to-include SNP -O /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_'+infile+'_1.vcf \n\n')
-    
-    o.write('module load vcftools \n')
-    o.write('vcftools --vcf /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_'+infile+'_1.vcf --remove-indels --maf 0.05 --min-alleles 2 --max-alleles 2 --minQ 20 --minDP 600 --maxDP 2000 --recode --recode-INFO-all --out /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1_delete \n\n')
-    
-    o.write('#gatk SelectVariants -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -V /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_'+infile+'_2.vcf --select-type-to-include SNP -O /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_'+infile+'_2.vcf \n\n')
-    
-    o.write('vcftools --vcf /home/jamcgirr/ph/data/combine_gvcfs/raw_snps_'+infile+'_2.vcf --remove-indels --maf 0.05 --min-alleles 2 --max-alleles 2 --minQ 20 --minDP 600 --maxDP 2000 --recode --recode-INFO-all --out /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2_delete \n\n')
-     
+           
     o.write('module load samtools \n')
-    o.write('module load bcftools \n')
+    o.write('module load bcftools \n\n')
     
-    o.write('bcftools filter -Oz -i \'MQ>30\' /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1_delete.recode.vcf -o /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1.recode.vcf.gz \n')
-    o.write('bcftools filter -Oz -i \'MQ>30\' /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2_delete.recode.vcf -o /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2.recode.vcf.gz \n')
+    o.write('bcftools view -S /home/jamcgirr/ph/data/combine_gvcfs/plates_1_through_5_rm.txt -m2 -M2 -v snps /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_'+infile+'_1.vcf | bcftools +fill-tags -- -t all,\'DP=sum(DP)\' | bcftools filter -Oz -i \'MQ>30 && QUAL>20 && INFO/DP>600 && INFO/DP<2000\' -o /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1.recode.vcf.gz \n')
+    o.write('bcftools view -S /home/jamcgirr/ph/data/combine_gvcfs/plates_1_through_5_rm.txt -m2 -M2 -v snps /home/jamcgirr/ph/data/combine_gvcfs/raw_variants_'+infile+'_2.vcf | bcftools +fill-tags -- -t all,\'DP=sum(DP)\' | bcftools filter -Oz -i \'MQ>30 && QUAL>20 && INFO/DP>600 && INFO/DP<2000\' -o /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2.recode.vcf.gz \n\n')
 
-    #o.write('bgzip -c /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1_delete.recode.vcf > /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1_delete.recode.vcf.gz \n')
-    #o.write('bgzip -c /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2_delete.recode.vcf > /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2_delete.recode.vcf.gz \n')
-    
     o.write('bcftools index /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1.recode.vcf.gz \n')
     o.write('bcftools index /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2.recode.vcf.gz \n\n')
    
-    o.write('rm /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_1_delete.recode.vcf \n')
-    o.write('rm /home/jamcgirr/ph/data/combine_gvcfs/filtered_snps_'+infile+'_2_delete.recode.vcf \n')
-
     
     o.write('\n\n#run: sbatch '+script)
     o.close()
 
-    #EST time ~ 4 hr
+    #EST time ~ 1.5hr
 ```
 
 ## Plot SNP stats for first half of Chr 1
@@ -654,7 +628,7 @@ outfile_name <- paste("population_",pop1$Population.Year[1],".txt", sep = "")
 ```
 
 
-# Concatenate chromosomes into one master `.vcf`
+# Concatenate chromosomes into one `.vcf`
 use bcftools concat
 
 example script
@@ -677,7 +651,8 @@ bcftools concat -o /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf
 
 #run: sbatch script_merge_snp_vcfs.sh
 ```
-### Generate merge script
+
+### Generate bcftools concat script
 ```{python,results='hide', eval = FALSE}
 job = 'merge_snp_vcfs'
 
@@ -704,7 +679,7 @@ outfile.close()
 ```
 
 # Subset .`vcf` into 14 populations (grouped by unique(location:year)) and filter for 50% genotyping rate
-use vcftools and bcftools
+use bcftools
 
 example script
 ```{bash,eval=FALSE,class.source = 'fold-show'}
@@ -712,30 +687,29 @@ example script
 
 #SBATCH --job-name=BC17_subset_snps_by_pop
 #SBATCH --mem=8G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e BC17_subset_snps_by_pop_%A_%a.err 
 #SBATCH --time=24:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load samtools 
 module load bcftools 
-bcftools view -S population_BC17.txt -O z /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf > /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_snps.vcf.gz 
-module load vcftools 
-vcftools --gzvcf /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_snps.vcf.gz --max-missing 0.5 --recode-INFO-all --recode --stdout | bgzip -c > /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz 
+bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/BC17_plates_1_through_5_rm.txt /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf | bcftools +fill-tags -- -t all,'DP=sum(DP)' | bcftools filter -Oz -i 'NS>32 ' > /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz 
 bcftools index /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz 
 
 
 
-#run: sbatch script_BC17_subset_snps_by_pop.sh
+#command to run: sbatch script_BC17_subset_snps_by_pop.sh
 
 ```
+
 ### Generate subset/filter scripts
 ```{python,results='hide', eval = FALSE}
 
 job_name = '_subset_snps_by_pop'
 
+pop_n = {"BC17":"64","CA17":"70","PWS07":"46","PWS17":"56","PWS91":"58","PWS96":"72","SS06":"41","SS17":"64","SS96":"78","TB06":"52","TB17":"72","TB91":"74","TB96":"73","WA17":"72"}
 infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
 
 for infile in infiles:
@@ -743,84 +717,102 @@ for infile in infiles:
     sbatch_header_loop(job_name,'8','4','24', infile)
     o = io.open(script,'a+', newline='\n')
         
-        
-    o.write('module load samtools \n')
+    inds_with_data = math.ceil(int(pop_n[infile]) * 0.5)   
     o.write('module load bcftools \n')
 
-    o.write('bcftools view -S population_'+infile+'.txt -O z /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf > /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_snps.vcf.gz \n')
-   
-    o.write('module load vcftools \n')
-    #o.write('vcftools --gzvcf /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_snps.vcf.gz --minDP 25 --max-missing 0.5 --recode-INFO-all --recode --stdout | bgzip -c > /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_filtered_snps.vcf.gz \n')
-    # min DP of 25 across 14 population:year groups = min DP of 350 
-    # minDP 350, maxDP 2000, maf 5%, minQ30 across all smaples and 50% genotyping rate across each population:year group)
-
-    o.write('vcftools --gzvcf /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_snps.vcf.gz --max-missing 0.8 --recode-INFO-all --recode --stdout | bgzip -c > /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_filtered_snps.vcf.gz \n')
-    # minDP 600, maxDP 2000, maf 5%, minQ20 across all smaples and 80% genotyping rate across each population:year group)
-
+    o.write('bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/'+infile+'_plates_1_through_5_rm.txt /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf | bcftools +fill-tags -- -t all,\'DP=sum(DP)\' | bcftools filter -Oz -i \'NS>'+str(inds_with_data)+' \' > /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_filtered_snps.vcf.gz \n')
     o.write('bcftools index /home/jamcgirr/ph/data/combine_gvcfs/population_'+infile+'_filtered_snps.vcf.gz \n\n')
 
-
-    o.write('\n\n#run: sbatch '+script)
+    o.write('\n\n#command to run: sbatch '+script)
     o.close()
 
-# EST time ~2hr
+# EST time ~1hr
+
 ```
 
-# Merge final filtered vcfs into master vcf  
-ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_maxmiss0.5.vcf  
-output plink and beagle format
+# Intersect filtered vcfs to find common SNPs  
+  
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=isec
+#SBATCH --mem=16G 
+#SBATCH --ntasks=4 
+#SBATCH -e isec_%A_%a.err 
+#SBATCH --time=144:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load bcftools 
+bcftools isec -n=14 -p isec_test --threads 4 /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_CA17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS07_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_WA17_filtered_snps.vcf.gz 
+
+
+
+#run: sbatch script_isec.sh
+```
+
+### Generate bcftools isec scripts
+```{python,results='hide', eval = FALSE}
+job_name = 'isec'
+
+sbatch_header(job_name,'16','16','144')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+o.write('module load bcftools \n')
+o.write('bcftools isec -n=14 -p isec_test --threads 16 /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_CA17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS07_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_WA17_filtered_snps.vcf.gz \n\n')
+
+
+o.write('\n\n#run: sbatch '+script)
+o.close()
+```
+
+# Filter final vcf to include SNPs with minor allele frequency > 0.05
+Use sites.txt generated by bcftools isec in previous step.
+
+Final vcf named ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz
 
 example script
 ```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
-#SBATCH --job-name=merge_filtered_pops
+#SBATCH --job-name=isec
 #SBATCH --mem=16G 
 #SBATCH --ntasks=4 
-#SBATCH -e merge_filtered_pops_%A_%a.err 
-#SBATCH --time=06-00:00  
+#SBATCH -e isec_%A_%a.err 
+#SBATCH --time=144:00:00  
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load samtools 
 module load bcftools 
-bcftools merge -O v --threads 4 -o /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5.vcf /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_CA17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS07_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_WA17_filtered_snps.vcf.gz 
-
-module load vcftools 
-vcftools --vcf /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5.vcf --BEAGLE-PL --chr chr1 --out /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5 
-#vcftools --vcf /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5.vcf --BEAGLE-PL --chr chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chr23,chr24,chr25,chr26  --out /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5 
-vcftools --vcf /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5.vcf --plink --out /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5 
+bcftools isec -n=14 -p isec_test --threads 4 /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_CA17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS07_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_WA17_filtered_snps.vcf.gz 
 
 
-#run: sbatch script_merge_filtered_pops.sh
 
+#run: sbatch script_isec.sh
 ```
-### Generate merge scripts
+
+### Generate final maf scripts
 ```{python,results='hide', eval = FALSE}
-job_name = 'merge_filtered_pops'
+job_name = 'final_subset_maf_0.05'
 
-vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.8' 
-
-
-sbatch_header(job_name,'16','8','144')
+sbatch_header(job_name,'16','16','144')
 script = 'script_' + job_name + '.sh'
 o = io.open(script,'a+', newline='\n')
 
-o.write('module load samtools \n')
-o.write('module load bcftools \n')
-o.write('bcftools merge -O v --threads 8 -o /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_CA17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS07_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_WA17_filtered_snps.vcf.gz \n\n')
-o.write('wc -l /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf > lines_'+vcf_name+'.txt \n')
-o.write('module load vcftools \n')
-o.write('vcftools --vcf /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf --BEAGLE-PL --chr chr1 --out /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+' \n')
-o.write('#vcftools --vcf /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf --BEAGLE-PL --chr chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chr23,chr24,chr25,chr26  --out /home/jamcgirr/ph/data/vcfs/'+vcf_name+' \n')
-o.write('vcftools --vcf /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf --plink --out /home/jamcgirr/ph/data/vcfs/'+vcf_name+' \n')
-o.write('module load plink \n')
-o.write('plink --file /home/jamcgirr/ph/data/vcfs/'+vcf_name+' --pca --out /home/jamcgirr/ph/data/plink/'+vcf_name+'\n') 
-
+o.write('#module load bcftools \n')
+o.write('##bcftools index /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf \n') 
+o.write('#bcftools view -R /home/jamcgirr/ph/data/combine_gvcfs/isec_test/sites.txt /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf -Oz > /home/jamcgirr/ph/data/combine_gvcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz \n')
+o.write('#bcftools index /home/jamcgirr/ph/data/combine_gvcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz  \n')
+o.write('bcftools filter -Oz -i \'INFO/AF>0.05\' -o /home/jamcgirr/ph/data/combine_gvcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz \n')
 
 o.write('\n\n#run: sbatch '+script)
 o.close()
+# 5 hrs (for view)
+
 ```
 
 
