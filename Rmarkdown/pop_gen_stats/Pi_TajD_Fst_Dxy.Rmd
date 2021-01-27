@@ -1,5 +1,5 @@
 ---
-title: "Pi_TajD_Fst_Dxy"
+title: "Fst_Dxy_TajimaD_Pi"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
@@ -30,8 +30,21 @@ This notebook generates scripts to calculate genome-wide summary statistics from
 
 The vcf was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
-* Load R libraries
-```{r setup, include=TRUE}
+The data set is a filtered `.vcf` with 892 Pacific herring low coverage genomes:
+
+minimum depth = 600  
+maximum depth = 2000  
+minimum base quality = 20  
+minimum mapping quality = 30  
+minor allele frequency > 5%  
+genotyping rate > 50% for each population (grouped by samping location and year)
+
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
+
+Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
+
+# Load R libraries
+```{r setup, include=TRUE, message=FALSE, warning=FALSE,}
 
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #     install.packages("BiocManager")
@@ -44,11 +57,13 @@ library(reticulate)
 library(ggpubr)
 library(sf)
 library(pophelper)
+library(windowscanr)
+library(data.table)
 
 # color-blind friendly 
 # Wong, B. Points of view: Color blindness. Nat Methods (2011).
 bla <- "#000000"
-blu <- "#0072b2"
+blu <- "#0072b2" 
 grb <- "#56b4e9"
 lir <- "#cc79a7"
 gre <- "#009e73"
@@ -59,7 +74,7 @@ gry<-  '#BBBBBB'
 
 ```
 
-* Load python libraries
+# Load python libraries
 ```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
 import io
 import pandas as pd
@@ -94,11 +109,593 @@ def sbatch_header_loop(job,mem,tasks,hours,infile):
 
 ```
 
+# Fst and Population Branch Statistic 
+
+Generate site frequency spectrum using vcf sites.
+
+## Subset master vcf into population vcfs
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=BC17_subset_pops_vcfs
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_subset_pops_vcfs_%A_%a.err 
+#SBATCH --time=24:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load bcftools 
+bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/BC17_plates_1_through_5_rm.txt --threads 4 /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz | bcftools +fill-tags -Oz -- -t all,'DP=sum(DP)' > /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz 
 
 
-# Pi and Tajimas D
+#command to run: sbatch script_BC17_subset_pops_vcfs.sh
+
+```
+
+### Generate subset scripts
+
+```{python,results='hide', eval = FALSE}
+
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+job_name = '_subset_pops_vcfs'
+
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','24', infile)
+    o = io.open(script,'a+', newline='\n')
+    
+
+    o.write('module load bcftools \n')
+    o.write('bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/'+infile+'_plates_1_through_5_rm.txt --threads 4 /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf.gz | bcftools +fill-tags -Oz -- -t all,\'DP=sum(DP)\' > /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz \n')
+    
+    
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+    
+#EST run time ~15min
+
+```
+
+## Use realSFS to make folded and unfolded SFS for each population
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=BC17_SFS
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_SFS_%A_%a.err 
+#SBATCH --time=24:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -doSaf 1 -vcf-pl /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz -out /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17 -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa 
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17.saf.idx -P 4 -fold 1 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17_folded.sfs 
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17.saf.idx -P 4 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17_unfolded.sfs 
+
+
+#command to run: sbatch script_BC17_SFS.sh
+```
+
+### Generate SFS scripts
+
+```{python,results='hide', eval = FALSE}
+
+job_name = '_SFS'
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','24', infile)
+    o = io.open(script,'a+', newline='\n')
+    
+    vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+    
+    # make saf from vcf
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -doSaf 1 -vcf-pl /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz -out /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+' -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa \n')
+    # make folded sfs
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'.saf.idx -P 4 -fold 1 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'_folded.sfs \n')
+    # make unfolded sfs
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'.saf.idx -P 4 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'_unfolded.sfs \n')
+    
+
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+
+# EST run time ~15min
+```
+
+
+## Plot Fst and PBS
+### By Chromosome
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+pop0 <- "TB17"
+pop1 <- "PWS17"
+pop2 <- "SS17"
+
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/", full.names=T)
+f <- fsts[1]
+
+#for (f in fsts){  
+
+pops <- strsplit(f, "_")
+pops <- c(pops[[1]][10], pops[[1]][11],gsub("\\.txt","",pops[[1]][12]))
+
+fst <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_",pops[1],"_",pops[2],"_",pops[3],".txt", sep = ""))
+#head(fst)
+fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
+fst$chr_num <- factor(fst$chr, levels = c(1:26))
+
+# Fst
+p <- ggplot(fst, aes(x = midPos, y = Fst01)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("Fst\n")+ xlab("")+ 
+     ggtitle(paste(pops[1],"vs. ", pops[2]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+p <- ggplot(fst, aes(x = midPos, y = Fst02)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("Fst\n")+ xlab("")+ 
+     ggtitle(paste(pops[1],"vs. ", pops[3]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+p <- ggplot(fst, aes(x = midPos, y = Fst12)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("Fst\n")+ xlab("")+ 
+     ggtitle(paste(pops[2],"vs. ", pops[3]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+#PBS
+p <- ggplot(fst, aes(x = midPos, y = PBS0)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("PBS\n")+ xlab("")+ 
+     ggtitle(paste(pops[1]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+p <- ggplot(fst, aes(x = midPos, y = PBS1)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("PBS\n")+ xlab("")+ 
+     ggtitle(paste(pops[2]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+p <- ggplot(fst, aes(x = midPos, y = PBS2)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("PBS\n")+ xlab("")+ 
+     ggtitle(paste(pops[3]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+#}
+
+
+```
+
+### Genome-wide mean Fst 2017 samples
+
+matrix 2017 samples
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/", full.names=T)
+
+
+# 2017 samples
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_SS17.txt")
+tbxpw <- round(mean(fst$Fst01),4)
+tbxss <- round(mean(fst$Fst02),4)
+pwxss <- round(mean(fst$Fst12),4)
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_BC17.txt")
+tbxbc <- round(mean(fst$Fst02),4)
+pwxbc <- round(mean(fst$Fst12),4)
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_WA17.txt")
+tbxwa <- round(mean(fst$Fst02),4)
+pwxwa <- round(mean(fst$Fst12),4)
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB17_PWS17_CA17.txt")
+tbxca <- round(mean(fst$Fst02),4)
+pwxca <- round(mean(fst$Fst12),4)
+
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_BC17.txt")
+ssxbc <- round(mean(fst$Fst12),4)
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_WA17.txt")
+ssxwa <- round(mean(fst$Fst12),4)
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS17_SS17_CA17.txt")
+ssxca <- round(mean(fst$Fst12),4)
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_BC17_WA17_CA17.txt")
+bcxwa <- round(mean(fst$Fst01),4)
+bcxca <- round(mean(fst$Fst02),4)
+waxca <- round(mean(fst$Fst12),4)
+
+fst_vec <- c(0,tbxpw,tbxss,tbxbc,tbxwa,tbxca,
+             tbxpw,0,pwxss,pwxbc,pwxwa,pwxca,
+             tbxss,pwxss,0,ssxbc,ssxwa,ssxca,
+             tbxbc,pwxbc,ssxbc,0,bcxwa,bcxca,
+             tbxwa,pwxwa,ssxwa,bcxwa,0,waxca,
+             tbxca,pwxca,ssxca,bcxca,waxca,0)
+
+fst_mat = matrix(fst_vec, nrow = 6, ncol = 6)
+colnames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
+rownames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
+print(fst_mat)
+
+  # Get upper triangle of the correlation matrix
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+    get_lower_tri<-function(cormat){
+    cormat[upper.tri(cormat)] <- NA
+    return(cormat)
+  }
+upper_tri <- get_upper_tri(fst_mat)
+
+# Melt the correlation matrix
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+# Heatmap
+ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient(low = blu, high = red, 
+    limit = c(min(c(fst_mat)[c(fst_mat) > 0]),max(fst_mat)), space = "Lab", 
+   name="Fst") +
+  theme_minimal()+ xlab("")+ylab("")+
+ theme(axis.text.x = element_text(angle = 0, vjust = 0, 
+    size = 12, hjust = 0.5))+
+   theme(axis.text.y = element_text(size = 12))+
+ coord_fixed()+
+ geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
+
+
+```
+
+# Dxy
+## Create .maf files
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=BC17_maf
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_maf_%A_%a.err 
+#SBATCH --time=1:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -out /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17 -fai /home/jamcgirr/ph/data/c_harengus/c.harengus.fa.fai -doGlf 2 -doMaf 3 -doMajorMinor 1 -doPost 1 -doGeno 2 -vcf-pl /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz -P 4 
+gzip -d /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17.mafs.gz 
+
+
+#command to run: sbatch script_BC17_maf.sh
+```
+
+### Generate maf scripts
+
+```{python,results='hide', eval = FALSE}
+
+job_name = '_maf'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','1', infile)
+    o = io.open(script,'a+', newline='\n')
+    
+    
+    # make mafs from vcf
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -out /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+' -fai /home/jamcgirr/ph/data/c_harengus/c.harengus.fa.fai -doGlf 2 -doMaf 3 -doMajorMinor 1 -doPost 1 -doGeno 2 -vcf-pl /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz -P 4 \n')
+    o.write('gzip -d /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'.mafs.gz \n')
+    
+    
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+
+# EST run time ~ 5 minutes
+```
+
+## Calculate Dxy from maf files
+
+```{r, results= "hide", eval=FALSE}
+
+mafs_dir <- "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/dxy/maf05/"
+comps <- c("TB_PWS","TB_SS","TB_BC","TB_WA","TB_CA",
+           "PWS_SS","PWS_BC","PWS_WA","PWS_CA",
+           "SS_BC","SS_WA","SS_CA",
+           "BC_WA","BC_CA",
+           "WA_CA")
+yr <- "17"
+comp <- "TB_PWS"
+
+for (comp in comps){
+
+popA <- paste(strsplit(comp,"_")[[1]][1],yr, sep = "")
+popB <- paste(strsplit(comp,"_")[[1]][2],yr, sep = "")
+
+allfreqA <- read.table(paste(mafs_dir,popA,".mafs", sep = ""),sep='\t',row.names=NULL, header=T)
+allfreqB <- read.table(paste(mafs_dir,popB,".mafs", sep = ""),sep='\t',row.names=NULL, header=T)
+
+### Manipulating the table and print dxy table
+allfreq <- merge(allfreqA, allfreqB, by=c("chromo","position"))
+allfreq <- allfreq[order(allfreq$chromo, allfreq$position),]
+# -> Actual dxy calculation
+allfreq <- transform(allfreq, dxy=(knownEM.x*(1-knownEM.y))+(knownEM.y*(1-knownEM.x)))
+
+#head(allfreq)
+
+rol_win <- winScan(x = allfreq, 
+                   groups = "chromo", 
+                   position = "position", 
+                   values = c("dxy"), 
+                   win_size = 50000,
+                   win_step = 10000,
+                   funs = c("sum"))
+rol_win$dxy <- rol_win$dxy_sum/50000
+
+# write.table(rol_win, file=paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/dxy/maf05/windows/",popA,"_",popB,"_Dxy_50kb_win_10kb_step.txt",sep = ""),quote=FALSE, row.names=FALSE, sep='\t')
+# print('Created Dxy_persite.txt')
+
+### Print global dxy
+# print(paste0(popA, popB,' Global dxy is: ',mean(rol_win$dxy)))
+  
+}
+
+```
+
+## Plot Dxy
+### By chromosome
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+dxys <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/dxy/maf05/windows/", full.names=T)
+d <- dxys[1]
+
+#for (d in dxys){  
+
+pops <- strsplit(d, "/")
+pops <- strsplit(pops[[1]][10], "_")
+
+pops <- c(pops[[1]][1], pops[[1]][2])
+dxy <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/dxy/maf05/windows/",pops[1],"_",pops[2],"_Dxy_50kb_win_10kb_step.txt", sep = ""))
+#head(fst)
+dxy <- dxy %>% mutate(chromo = as.numeric(gsub("chr", "", chromo)))
+dxy$chr_num <- factor(dxy$chr, levels = c(1:26))
+
+
+p <- ggplot(dxy, aes(x = win_mid, y = dxy)) + 
+     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("Dxy\n")+ xlab("")+ 
+     ggtitle(paste(pops[1],"vs. ", pops[2]))+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = org)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+#}
+
+```
+
+### Genome-wide mean Dxy 2017 samples
+ 
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+dxys <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/dxy/maf05/windows/", full.names=T)
+dxy_dir <- "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/dxy/maf05/windows/"
+# 2017 samples
+tbxpw <- round(mean(read.delim(paste(dxy_dir,"TB17_PWS17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+tbxss <- round(mean(read.delim(paste(dxy_dir,"TB17_SS17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+pwxss <- round(mean(read.delim(paste(dxy_dir,"PWS17_SS17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+tbxbc <- round(mean(read.delim(paste(dxy_dir,"TB17_BC17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+pwxbc <- round(mean(read.delim(paste(dxy_dir,"PWS17_BC17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+tbxwa <- round(mean(read.delim(paste(dxy_dir,"TB17_WA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+pwxwa <- round(mean(read.delim(paste(dxy_dir,"PWS17_WA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+tbxca <- round(mean(read.delim(paste(dxy_dir,"TB17_CA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+pwxca <- round(mean(read.delim(paste(dxy_dir,"PWS17_CA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+
+ssxbc <- round(mean(read.delim(paste(dxy_dir,"SS17_BC17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+ssxwa <- round(mean(read.delim(paste(dxy_dir,"SS17_WA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+ssxca <- round(mean(read.delim(paste(dxy_dir,"SS17_CA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+bcxwa <- round(mean(read.delim(paste(dxy_dir,"BC17_WA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+bcxca <- round(mean(read.delim(paste(dxy_dir,"BC17_CA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+waxca <- round(mean(read.delim(paste(dxy_dir,"WA17_CA17_Dxy_50kb_win_10kb_step.txt", sep = ""))$dxy),7)
+
+fst_vec <- c(0,tbxpw,tbxss,tbxbc,tbxwa,tbxca,
+             tbxpw,0,pwxss,pwxbc,pwxwa,pwxca,
+             tbxss,pwxss,0,ssxbc,ssxwa,ssxca,
+             tbxbc,pwxbc,ssxbc,0,bcxwa,bcxca,
+             tbxwa,pwxwa,ssxwa,bcxwa,0,waxca,
+             tbxca,pwxca,ssxca,bcxca,waxca,0)
+
+fst_mat = matrix(fst_vec, nrow = 6, ncol = 6)
+colnames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
+rownames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
+print(fst_mat)
+
+  # Get upper triangle of the correlation matrix
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+    get_lower_tri<-function(cormat){
+    cormat[upper.tri(cormat)] <- NA
+    return(cormat)
+  }
+upper_tri <- get_upper_tri(fst_mat)
+
+# Melt the correlation matrix
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+# Heatmap
+ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient(low = blu, high = red, 
+    limit = c(min(c(fst_mat)[c(fst_mat) > 0]),max(fst_mat)), space = "Lab", 
+   name="Fst") +
+  theme_minimal()+ xlab("")+ylab("")+
+ theme(axis.text.x = element_text(angle = 0, vjust = 0, 
+    size = 12, hjust = 0.5))+
+   theme(axis.text.y = element_text(size = 12))+
+ coord_fixed()+
+ geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
+
+
+```
+
+# Tajimas D
+
+## Estimate thetas using SFS from vcf sites 
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=BC17_thetas_vcf
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_thetas_vcf_%A_%a.err 
+#SBATCH --time=24:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS saf2theta /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17.saf.idx -outname /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/BC17 -fold 1 -sfs /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17_folded.sfs 
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/thetaStat do_stat /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/BC17.thetas.idx 
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/thetaStat do_stat /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/BC17.thetas.idx -win 50000 -step 10000 -outnames /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/BC17_50kb_win_10kb_step 
+
+
+#run: sbatch script_BC17_thetas_vcf.sh
+```
+
+### Generate thetas scripts
+
+```{python,results='hide', eval = FALSE}
+job_name = '_thetas_vcf'
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','24', infile)
+    o = io.open(script,'a+', newline='\n')
+    
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS saf2theta /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'.saf.idx -outname /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/'+infile+' -fold 1 -sfs /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'_folded.sfs \n')
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/thetaStat do_stat /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/'+infile+'.thetas.idx \n')
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/thetaStat do_stat /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/'+infile+'.thetas.idx -win 50000 -step 10000 -outnames /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/thetas/'+infile+'_50kb_win_10kb_step \n')    
+    
+    o.write('\n\n#run: sbatch '+script)
+    o.close()
+
+# EST run time ~ 1min
+
+```
+
+
+## Plot Tajimas D
+### By population
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
+pop_names <- c("CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
+
+pop <- "BC17"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/vcf/maf05/',pop,'_50kb_win_10kb_step.pestPG',sep = ""))
+#thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/downsample_41/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
+thetas <- thetas[thetas$nSites > 0,]
+thetas <- thetas[c("Tajima")]
+names(thetas)[names(thetas)=="Tajima"] <- pop
+
+for (pop in pop_names){
+
+thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/vcf/maf05/',pop,'_50kb_win_10kb_step.pestPG',sep = ""))
+#thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/downsample_41/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
+thetas1 <- thetas1[thetas1$nSites > 0,]
+thetas1[c("Chr","WinCenter","Tajima")]
+thetas$Tajima <- thetas1$Tajima
+names(thetas)[names(thetas)=="Tajima"] <- pop 
+  
+}
+
+my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir)
+theta_test <- thetas %>% 
+      gather(key="MesureType", value="Val")
+p1 <- thetas %>% 
+      gather(key="MesureType", value="Val") %>%
+      ggplot( aes(x=reorder(MesureType,Val, FUN = mean), y=Val, fill=MesureType)) +
+      geom_violin() + xlab("\npopulation/year") + ylab("Tajima's D\n")+
+      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
+      #stat_summary(fun=mean, geom="line")+
+      theme_minimal()
+      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/taj_d.png", height = 5, width = 7, units = 'in', res = 600)
+
+p1
+
+#dev.off()
+```
+
+### By chromosome
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop <- "BC17"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/vcf/maf05/',pop,'_50kb_win_10kb_step.pestPG',sep = ""))
+#thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/downsample_41/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
+
+thetas <- thetas %>% mutate(chr = as.numeric(gsub("chr", "", Chr)))
+thetas$chr_num <- factor(thetas$chr, levels = c(1:26))
+
+p <- ggplot(thetas, aes(x = WinCenter, y = Tajima)) + 
+     geom_point(size = 1, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("Tajima's D\n")+ xlab("")+ 
+     ggtitle(pop)+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = lir)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+```
+
+
+# Nucleotide diversity 
 ## Use ANGSD to estimate SFS using genotype likelihoods
-Randomly down sample the number of input .bam files to match the lowest population sample size (n = 41)
+The way ANGSD estimates pi changed with an update (from doThetas to safToThetas) and the estimates are way too high (https://github.com/ANGSD/angsd/issues/336). This issue has to do with invariant sites. In order to account for invariant sites, I run ANGSD directly on .bam files to create an .saf file for each population. Due to memory constraints, I randomly down sample the number of input .bam files to match the lowest population sample size (n = 41)
 
 use the -nSites 100000000 flag due to memory limits
 this breaks up genome into 7 chunks
@@ -228,7 +825,7 @@ for infile in infiles:
 
 ## Plot folded SFS
 
-```{r}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 # using SFS from angsd -dosaf -bam
 
 pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
@@ -237,12 +834,13 @@ pop_name <- "BC17"
 
 #for (pop_name in pop_names){
 sfs <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/sfs/downsample_41/folded/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), header = FALSE, stringsAsFactors = FALSE)
-sfs
+sfs <- as.vector(colSums(sfs))
+#sfs
 barplot(sfs[-c(1,length(sfs))]) #plot variable sites 
 
 # Use this to sum columns from the 'chunks' sfs calculated with nSites
 
-sfs <- as.vector(colSums(sfs))
+#sfs <- as.vector(colSums(sfs))
 #write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/folded/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
 #}
 
@@ -251,9 +849,9 @@ sfs <- as.vector(colSums(sfs))
 
 ```
 
-## Plot folded SFS
+## Plot unfolded SFS
 
-```{r}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 # using SFS from angsd -dosaf -bam
 
 pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
@@ -262,7 +860,7 @@ pop_name <- "BC17"
 
 #for (pop_name in pop_names){
 sfs <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/sfs/downsample_41/unfolded/",pop_name,"_minQ20_minMQ30_unfolded.sfs",sep = ""), header = FALSE, stringsAsFactors = FALSE)
-sfs
+#sfs
 sfs <- as.vector(colSums(sfs))
 barplot(sfs[-c(1,length(sfs))]) #plot variable sites 
 
@@ -272,68 +870,13 @@ barplot(sfs[-c(1,length(sfs))]) #plot variable sites
 #write.table(t(sfs),paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/downsample_41/sfs/folded/",pop_name,"_minQ20_minMQ30_folded.sfs",sep = ""), quote = FALSE, row.names = FALSE, col.names = FALSE)
 #}
 
-# https://github.com/ANGSD/angsd/issues/97
-
 
 ```
-
-
-## Plot Tajimas D
-
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
-
-pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
-pop_names <- c("CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
-
-pop <- "BC17"
-#thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/50kb/population_',pop,'_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas50kbWindow.gz.pestPG',sep = ""))
-thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/downsample_41/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
-thetas <- thetas[c("Tajima")]
-names(thetas)[names(thetas)=="Tajima"] <- pop
-
-for (pop in pop_names){
-
-thetas1 <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/downsample_41/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
-thetas1[c("Chr","WinCenter","Tajima")]
-thetas$Tajima <- thetas1$Tajima
-names(thetas)[names(thetas)=="Tajima"] <- pop 
-  
-}
-
-my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir)
-theta_test <- thetas %>% 
-      gather(key="MesureType", value="Val")
-p1 <- thetas %>% 
-      gather(key="MesureType", value="Val") %>%
-      ggplot( aes(x=reorder(MesureType,Val, FUN = mean), y=Val, fill=MesureType)) +
-      geom_violin() + xlab("\npopulation/year") + ylab("Tajima's D\n")+
-      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
-      #stat_summary(fun=mean, geom="line")+
-      theme_minimal()
-      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
-
-#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/taj_d.png", height = 5, width = 7, units = 'in', res = 600)
-
-p1
-
-#dev.off()
-```
-
 
 ## Plot Pi
+### By population
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
-# thetas <-read.delim('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/population_BC17_ph_filtered_snps_minD# P600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_theta.thetas10kbWindow.gz.pestPG')
-# #pi = tP/nsites
-# #https://doi.org/10.1186/s12862-018-1209-y
-# thetas$pi <- thetas$tP/thetas$nSites 
-# chr1 <- thetas %>% filter(Chr == "chr1")
-# range(thetas$Tajima)
-# range(na.omit(thetas$pi))
-# 
-# 
-# plot(chr1$WinCenter, chr1$Tajima)
-# plot(chr1$WinCenter, chr1$pi)
 
 
 #https://github.com/ANGSD/angsd/issues/329#issuecomment-681005380
@@ -374,7 +917,34 @@ p1
 
 #dev.off()
 
-### vcftools just to get a sense with hard calls since angsd values are stupid high
+```
+
+### By chromosome
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop <- "BC17"
+thetas <-read.delim(paste('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/thetas/downsample_41/folded/',pop,'_minQ20_minMQ30_50kb_win_10kb_step.pestPG',sep = ""))
+thetas$pi<- thetas$tP/thetas$nSites
+
+thetas <- thetas %>% mutate(chr = as.numeric(gsub("chr", "", Chr)))
+thetas$chr_num <- factor(thetas$chr, levels = c(1:26))
+
+p <- ggplot(thetas, aes(x = WinCenter, y = pi)) + 
+     geom_point(size = 1, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(pi))+ xlab("")+ 
+     ggtitle(pop)+
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = grb)+
+     facet_wrap(~chr_num, ncol = 9)
+print(p)
+
+```
+
+```{r, include=FALSE, eval=FALSE}
+### vcftools pi just to get a sense with hard calls since angsd values are stupid high
+
 #pi_50kb_win_BC17_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.txt.windowed
 
 
@@ -413,332 +983,5 @@ p1
 #p1
 
 #dev.off()
-
-
-
-```
-
-## Plot Pi population matrix
-
-
-
-
-
-
-
-# Fst, Dxy, and Population Branch Statistic 
-
-Generate site frequency spectrum using vcf sites
-
-## Subset master vcf into population vcfs
-example script
-```{bash,eval=FALSE,class.source = 'fold-show'}
-#!/bin/bash
-
-#SBATCH --job-name=BC17_subset_pops_vcfs
-#SBATCH --mem=8G 
-#SBATCH --ntasks=4 
-#SBATCH -e BC17_subset_pops_vcfs_%A_%a.err 
-#SBATCH --time=24:00:00 
-#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
-#SBATCH --mail-type=ALL
-#SBATCH -p high 
-
-module load bcftools 
-bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/BC17_plates_1_through_5_rm.txt --threads 4 /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz | bcftools +fill-tags -Oz -- -t all,'DP=sum(DP)' > /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz 
-
-
-#command to run: sbatch script_BC17_subset_pops_vcfs.sh
-
-```
-
-### Generate subset scripts
-
-```{python,results='hide', eval = FALSE}
-
-vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
-job_name = '_subset_pops_vcfs'
-
-infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
-
-for infile in infiles:
-    script = 'script_' + infile + job_name + '.sh'
-    sbatch_header_loop(job_name,'8','4','24', infile)
-    o = io.open(script,'a+', newline='\n')
-    
-
-    o.write('module load bcftools \n')
-    o.write('bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/'+infile+'_plates_1_through_5_rm.txt --threads 4 /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.vcf.gz | bcftools +fill-tags -Oz -- -t all,\'DP=sum(DP)\' > /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz \n')
-    
-    
-    o.write('\n\n#command to run: sbatch '+script)
-    o.close()
-    
-#EST run time ~15min
-
-```
-
-## Use realSFS to make folded and unfolded SFS for each population
-
-example script
-```{bash,eval=FALSE,class.source = 'fold-show'}
-#!/bin/bash
-
-#SBATCH --job-name=BC17_SFS
-#SBATCH --mem=8G 
-#SBATCH --ntasks=4 
-#SBATCH -e BC17_SFS_%A_%a.err 
-#SBATCH --time=24:00:00 
-#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
-#SBATCH --mail-type=ALL
-#SBATCH -p high 
-
-/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -doSaf 1 -vcf-pl /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz -out /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17 -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa 
-/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17.saf.idx -P 4 -fold 1 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17_folded.sfs 
-/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17.saf.idx -P 4 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/BC17_unfolded.sfs 
-
-
-#command to run: sbatch script_BC17_SFS.sh
-```
-
-### Generate SFS scripts
-
-```{python,results='hide', eval = FALSE}
-
-job_name = '_SFS'
-infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
-
-for infile in infiles:
-    script = 'script_' + infile + job_name + '.sh'
-    sbatch_header_loop(job_name,'8','4','24', infile)
-    o = io.open(script,'a+', newline='\n')
-    
-    vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
-    
-    # make saf from vcf
-    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -doSaf 1 -vcf-pl /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz -out /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+' -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa \n')
-    # make folded sfs
-    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'.saf.idx -P 4 -fold 1 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'_folded.sfs \n')
-    # make unfolded sfs
-    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'.saf.idx -P 4 > /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/'+infile+'_unfolded.sfs \n')
-    
-
-    o.write('\n\n#command to run: sbatch '+script)
-    o.close()
-
-# EST run time ~15min
-```
-
-
-
-
-
-
-
-
-## Plot Fst
-
-```{r}
-
-pop_names = c("PWS91","PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
-
-pop0 <- "TB17"
-pop1 <- "PWS17"
-pop2 <- "SS17"
-
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/", full.names=T)
-#fsts <- fsts[1]
-
-for (f in fsts){  
-
-pops <- strsplit(f, "_")
-pops <- c(pops[[1]][9], pops[[1]][10],gsub("\\.txt","",pops[[1]][11]))
-
-fst <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/fst_pbs_50kb_win_10kb_step_",pops[1],"_",pops[2],"_",pops[3],".txt", sep = ""))
-#head(fst)
-fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
-fst$chr_num <- factor(fst$chr, levels = c(1:26))
-
-# Fst
-p <- ggplot(fst, aes(x = midPos, y = Fst01)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("Fst\n")+ xlab("")+ 
-     ggtitle(paste(pops[1],"vs. ", pops[2]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-p <- ggplot(fst, aes(x = midPos, y = Fst02)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("Fst\n")+ xlab("")+ 
-     ggtitle(paste(pops[1],"vs. ", pops[3]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-p <- ggplot(fst, aes(x = midPos, y = Fst12)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("Fst\n")+ xlab("")+ 
-     ggtitle(paste(pops[2],"vs. ", pops[3]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-#PBS
-p <- ggplot(fst, aes(x = midPos, y = PBS0)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("PBS\n")+ xlab("")+ 
-     ggtitle(paste(pops[1]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-p <- ggplot(fst, aes(x = midPos, y = PBS1)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("PBS\n")+ xlab("")+ 
-     ggtitle(paste(pops[2]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-p <- ggplot(fst, aes(x = midPos, y = PBS2)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("PBS\n")+ xlab("")+ 
-     ggtitle(paste(pops[3]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-}
-
-#dxy
-
-
-
-
-# chr1 <- fst %>% filter(chr == "chr1")
-# 
-# plot(chr1$midPos, chr1$Fst01)
-# plot(chr1$midPos, chr1$Fst02)
-# plot(chr1$midPos, chr1$Fst12)
-# 
-# plot(chr1$midPos, chr1$PBS0)
-# plot(chr1$midPos, chr1$PBS1)
-# plot(chr1$midPos, chr1$PBS2)
-
-```
-
-
-
-```{r, echo = FALSE,results='hide'}
-## Site Frequency Spectrum
-# s<-scan('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/thetas/population_BC17_ph_filtered_snps_minDP600_maxDP20# 00_maf0.05_minQ20_maxmiss0.5.sfs')
-# s<-s[-c(1,length(s))]
-# s<-s/sum(s)
-# barplot(s,names=1:length(s),main='SFS')
-```
-
-
-## Dxy
-
-```{r, results= "hide", eval=FALSE}
-
-mafs_dir <- "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/dxy/mafs/"
-comps <- c("TB_PWS","TB_SS","TB_BC","TB_WA","TB_CA",
-           "PWS_SS","PWS_BC","PWS_WA","PWS_CA",
-           "SS_BC","SS_WA","SS_CA",
-           "BC_WA","BC_CA",
-           "WA_CA")
-yr <- "17"
-comp <- "TB_PWS"
-
-for (comp in comps){
-
-popA <- paste(strsplit(comp,"_")[[1]][1],yr, sep = "")
-popB <- paste(strsplit(comp,"_")[[1]][2],yr, sep = "")
-
-allfreqA <- read.table(paste(mafs_dir,popA,"_vcf.mafs", sep = ""),sep='\t',row.names=NULL, header=T)
-allfreqB <- read.table(paste(mafs_dir,popB,"_vcf.mafs", sep = ""),sep='\t',row.names=NULL, header=T)
-
-### Manipulating the table and print dxy table
-allfreq <- merge(allfreqA, allfreqB, by=c("chromo","position"))
-allfreq <- allfreq[order(allfreq$chromo, allfreq$position),]
-# -> Actual dxy calculation
-allfreq <- transform(allfreq, dxy=(knownEM.x*(1-knownEM.y))+(knownEM.y*(1-knownEM.x)))
-
-#head(allfreq)
-
-rol_win <- winScan(x = allfreq, 
-                   groups = "chromo", 
-                   position = "position", 
-                   values = c("dxy"), 
-                   win_size = 50000,
-                   win_step = 10000,
-                   funs = c("sum"))
-rol_win$dxy <- rol_win$dxy_sum/50000
-
-#write.table(rol_win, file=paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/dxy/windows/",popA,"_",popB,"_Dxy_50kb_win_10kb_step.txt",sep = ""),quote=FALSE, row.names=FALSE, sep='\t')
-print('Created Dxy_persite.txt')
-
-### Print global dxy
-print(paste0(popA, popB,' Global dxy is: ',mean(rol_win$dxy)))
-  
-}
-
-
-dxys <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/dxy/windows/", full.names=T)
-#d <- dxys[1]
-
-for (d in dxys){  
-
-pops <- strsplit(d, "/")
-pops <- strsplit(pops[[1]][11], "_")
-
-pops <- c(pops[[1]][1], pops[[1]][2])
-dxy <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/dxy/windows/",pops[1],"_",pops[2],"_Dxy_50kb_win_10kb_step.txt", sep = ""))
-#head(fst)
-dxy <- dxy %>% mutate(chromo = as.numeric(gsub("chr", "", chromo)))
-dxy$chr_num <- factor(dxy$chr, levels = c(1:26))
-
-
-p <- ggplot(dxy, aes(x = win_mid, y = dxy)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab("Dxy\n")+ xlab("")+ 
-     ggtitle(paste(pops[1],"vs. ", pops[2]))+
-     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = org)+
-     facet_wrap(~chr_num, ncol = 9)
-print(p)
-
-}
-
-
-
-
-fst_vec <- c(0,tbxpw,tbxss,tbxbc,tbxwa,tbxca,
-             tbxpw,0,pwxss,pwxbc,pwxwa,pwxca,
-             tbxss,pwxss,0,ssxbc,ssxwa,ssxca,
-             tbxbc,pwxbc,ssxbc,0,bcxwa,bcxca,
-             tbxwa,pwxwa,ssxwa,bcxwa,0,waxca,
-             tbxca,pwxca,ssxca,bcxca,waxca,0)
-
-fst_mat = matrix(fst_vec, nrow = 6, ncol = 6)
-colnames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
-rownames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
-print(fst_mat)
-
 ```
 

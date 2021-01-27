@@ -28,10 +28,9 @@ This notebook results from an R markdown file that generates scripts to create a
 
 This notebook uses the R package reticulate with python to automate the tedious process of writing bash scripts for each job run on the computing cluster. These scripts were made to run on the Farm cluster which uses SLURM scheduling. Each bash script has a SLURM header.
 
-Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
-
 Data info: `fastq`, `bam`, and `.vcf` files are currently located on the Farm sever at UC Davis (/home/eoziolor/phpopg/data/align/). Raw g.vcfs were generated from `.bam`s aligned to c. harengus fasta.
 
+Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 
 # Load R libraries and set color palette 
 ```{r setup,message=FALSE, warning=FALSE,class.source = 'fold-show'}
@@ -90,6 +89,7 @@ def sbatch_header_loop(job,mem,tasks,hours,infile):
     outfile.close()
 
 ```
+
 # Trim, align, index
 Trim `.fastq`, align with bwa mem, and index `.bam` with samtools
 

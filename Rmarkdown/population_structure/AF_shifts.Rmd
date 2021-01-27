@@ -55,69 +55,308 @@ gry<-  '#BBBBBB'
 
 ```
 
-# Allele Frequency Shifts
+# Summary
 
-## PWS 1991 --> 1996
-The summary statistic ∆z2 was the squared within-line difference in arcsine square-root transformed MAF q; it ranges from 0 to π2. 
+This notebook analyzes allele frequency shifts between Pacific Herring samples collected in 1991, 1996, 2006-7, and 2017. The summary statistic ∆z is the difference in arcsine square-root transformed minor allele frequencies (Following methods used for the [Longshanks experiment](https://elifesciences.org/articles/42014#s4)). 
 
-Following [Longshanks](https://elifesciences.org/articles/42014#s4)
+The data set is a filtered `.vcf` with 200k SNPs across 892 Pacific herring low coverage genomes:
 
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+minimum depth = 600  
+maximum depth = 2000  
+minimum base quality = 20  
+minimum mapping quality = 30  
+minor allele frequency > 5%  
+genotyping rate > 50% for each population (grouped by samping location and year)
+
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
+
+Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
+
+# Output allele frequncies from vcf
+
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=BC17_freqs
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_freqs_%A_%a.err 
+#SBATCH --time=1:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load bcftools
+bcftools query -f '%CHROM %POS %AF\n' /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz > /home/jamcgirr/ph/data/freqs/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt 
+
+
+#command to run: sbatch script_BC17_freqs.sh
+```
+
+## Generate scripts
+
+```{python,results='hide', eval = FALSE}
+# get allele frequencies for arcsine transformed shifts
+job_name = '_freqs'
+
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','1', infile)
+    o = io.open(script,'a+', newline='\n') 
+
+    o.write('module load bcftools\n')
+
+    o.write('bcftools query -f \'%CHROM %POS %AF\\n\' /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz > /home/jamcgirr/ph/data/freqs/population_'+infile+'_'+vcf_name+'_freqs.txt \n')
+
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+            
+# calculate direct from AC and AN        
+#bcftools query -f '%CHROM %POS %AN %AC{0}\n' /home/jamcgirr/ph/data/vcfs/split_pops/population_PWS07_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_5_rm.vcf > /home/jamcgirr/ph/data/freqs/PWS07_freqs_test.txt
+
+```
+
+# Transform AFs and average across sliding windows
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 #AF is calculated as AC/AN, where AC is total ALT allele count and AN is total allele called in genotypes
-t0 <- read.table("C:/Users/jmcgirr/Desktop/PWS91_freqs_test.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AN","t0_AC"))
-t1 <- read.table("C:/Users/jmcgirr/Desktop/PWS96_freqs_test.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t1_AN","t1_AC"))
-t2 <- read.table("C:/Users/jmcgirr/Desktop/PWS07_freqs_test.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t2_AN","t2_AC"))
-t3 <- read.table("C:/Users/jmcgirr/Desktop/PWS17_freqs_test.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t3_AN","t3_AC"))
-head(t0)
+
+t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
+t1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t1_AF"))
+t2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS07_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t2_AF"))
+t3 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t3_AF"))
+
+
+t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
+t1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t1_AF"))
+t2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB06_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t2_AF"))
+t3 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t3_AF"))
+
+
 freqs <- data.frame(chr = t0$chr,
                     pos = t0$pos,
-                    t0_AN = t0$t0_AN,
-                    t0_AC = t0$t0_AC,
-                    t1_AN = t1$t1_AN,
-                    t1_AC = t1$t1_AC,
-                    t2_AN = t2$t2_AN,
-                    t2_AC = t2$t2_AC,
-                    t3_AN = t3$t3_AN,
-                    t3_AC = t3$t3_AC)
-
-freqs$t0_AF <- freqs$t0_AC / freqs$t0_AN
-freqs$t1_AF <- freqs$t1_AC / freqs$t1_AN
-freqs$t2_AF <- freqs$t2_AC / freqs$t2_AN
-freqs$t3_AF <- freqs$t3_AC / freqs$t3_AN
-freqs <- na.omit(freqs)
+                    t0_AF = t0$t0_AF,
+                    t1_AF = t1$t1_AF,
+                    t2_AF = t2$t2_AF,
+                    t3_AF = t3$t3_AF)
 
 freqs$t0_transformed_freq <- asin(sqrt(freqs$t0_AF))
 freqs$t1_transformed_freq <- asin(sqrt(freqs$t1_AF))
 freqs$t2_transformed_freq <- asin(sqrt(freqs$t2_AF))
 freqs$t3_transformed_freq <- asin(sqrt(freqs$t3_AF))
 
-freqs$zt01 <- (freqs$t1_transformed_freq - freqs$t0_transformed_freq)^2
-freqs$zt02 <- (freqs$t2_transformed_freq - freqs$t0_transformed_freq)^2
-freqs$zt03 <- (freqs$t3_transformed_freq - freqs$t0_transformed_freq)^2
+freqs$zt01 <- freqs$t1_transformed_freq - freqs$t0_transformed_freq
+freqs$zt02 <- freqs$t2_transformed_freq - freqs$t0_transformed_freq
+freqs$zt03 <- freqs$t3_transformed_freq - freqs$t0_transformed_freq
+freqs$zt12 <- freqs$t2_transformed_freq - freqs$t1_transformed_freq
+freqs$zt13 <- freqs$t3_transformed_freq - freqs$t1_transformed_freq
+freqs$zt23 <- freqs$t3_transformed_freq - freqs$t2_transformed_freq
+
 
 head(freqs)
 nrow(freqs)
+#write.table(freqs, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/persite/TB_shifts_persite.txt")
+
 
 freqs_win <- winScan(x = freqs, 
                    groups = "chr", 
                    position = "pos", 
-                   values = c("zt01","zt02","zt03"), 
-                   win_size = 10000,
-                   win_step = 5000,
+                   values = c("zt01","zt02","zt03","zt12","zt13","zt23"), 
+                   win_size = 50000,
+                   win_step = 10000,
                    funs = c("mean"))
 freqs_win <- na.omit(freqs_win)
 freqs_win <- freqs_win %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 
-#write.table(freqs_win, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/")
+#write.table(freqs_win, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_50kb_win_10kb_step.txt")
 
-tops <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .99)[[1]] &
-                  freqs_win$zt02_mean >= quantile(freqs_win$zt02_mean, .99)[[1]] &
-                  freqs_win$zt03_mean >= quantile(freqs_win$zt03_mean, .99)[[1]],]
+```
+
+# Compare magnitude of AF shifts between populations
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+freqs_win_p <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
+freqs_win_t <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_50kb_win_10kb_step.txt")
+freqs_win_s <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_50kb_win_10kb_step.txt")
+
+all_pops <- data.frame(chr = freqs_win_p$chr,
+                       win_mid = freqs_win_p$win_mid,
+                       zt01_p = freqs_win_p$zt01_mean,
+                       zt02_p = freqs_win_p$zt02_mean,
+                       zt03_p = freqs_win_p$zt03_mean,
+                       zt12_p = freqs_win_p$zt12_mean,
+                       zt13_p = freqs_win_p$zt13_mean,
+                       zt23_p = freqs_win_p$zt23_mean,
+                       zt01_t = freqs_win_t$zt01_mean,
+                       zt02_t = freqs_win_t$zt02_mean,
+                       zt03_t = freqs_win_t$zt03_mean,
+                       zt12_t = freqs_win_t$zt12_mean,
+                       zt13_t = freqs_win_t$zt13_mean,
+                       zt23_t = freqs_win_t$zt23_mean,
+                       zt12_s = freqs_win_s$zt12_mean,
+                       zt13_s = freqs_win_s$zt13_mean,
+                       zt23_s = freqs_win_s$zt23_mean)
 
 
-print("number of 10kb windows with z > genome-wide 99th %ile in each comparison")
+
+vio_plot <- all_pops[,-c(1:2)]
+all_pops$chr_num <- factor(all_pops$chr, levels = c(1:26))
+
+
+
+
+zp <- data.frame(z91_96 = all_pops$zt01_p,pop = "PWS")
+zt <- data.frame(z91_96 = all_pops$zt01_t,pop = "TB")
+z <- rbind(zp,zt)
+
+p<-ggplot(z, aes(x=z91_96, fill=pop)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "Population",values=c(red,blu))+
+   theme_minimal()
+p
+
+
+zp <- data.frame(z96_07 = all_pops$zt12_p,pop = "PWS")
+zt <- data.frame(z96_07 = all_pops$zt12_t,pop = "TB")
+zs <- data.frame(z96_07 = all_pops$zt12_s,pop = "SS")
+
+z <- rbind(zp,zt,zs)
+
+p<-ggplot(z, aes(x=z96_07, fill=pop)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "Population",values=c(red,yel,blu))+
+   theme_minimal()
+p
+
+zp <- data.frame(z07_17 = all_pops$zt23_p,pop = "PWS")
+zt <- data.frame(z07_17 = all_pops$zt23_t,pop = "TB")
+zs <- data.frame(z07_17 = all_pops$zt23_s,pop = "SS")
+
+z <- rbind(zp,zt,zs)
+
+p<-ggplot(z, aes(x=z07_17, fill=pop)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "Population",values=c(red,yel,blu))+
+   theme_minimal()
+p
+
+
+
+
+p1 <- ggplot(vio_plot,aes(factor(Year.Collected), MEAN_COVERAGE))+
+      geom_violin()+ xlab("year collected") + ylab("mean coverage")+
+      #geom_boxplot(width=0.1)
+      theme_minimal()+
+      geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir, "black")
+
+p1 <- vio_plot %>% 
+      gather(key="MesureType", value="Val") %>%
+      ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
+      geom_violin() + xlab("\n") + ylab(expression(paste(Delta, "z")))+
+      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
+      #stat_summary(fun=mean, geom="line")+
+      theme_minimal()+
+      geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/taj_d.png", height = 5, width = 7, units = 'in', res = 600)
+
+p1
+
+```
+
+# Identify windows where allele frequencies:
+
+  - increased between each sampling period
+  - decreased between each sampling period
+  - increased between 91 and 96, decreased between 96 and 07, and continued to decrease between 07 and 17
+  - decreased between 91 and 96, increased between 96 and 07, and continued to increase between 07 and 17
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
+
+# identify windows where allele frequencies increased between each sampling period
+increased_freq <- freqs_win[freqs_win$zt01_mean > 0 &
+                            freqs_win$zt12_mean > 0 &
+                            freqs_win$zt23_mean > 0,]
+nrow(increased_freq)
+nrow(increased_freq) / nrow(freqs_win)
+# identify windows where allele frequencies increased between each sampling period
+decreased_freq <- freqs_win[freqs_win$zt01_mean < 0 &
+                            freqs_win$zt12_mean < 0 &
+                            freqs_win$zt23_mean < 0,]
+nrow(decreased_freq)
+nrow(decreased_freq) / nrow(freqs_win)
+# identify windows where allele frequencies increased between 91 and 96
+# and decreased between 96 and 07
+# and continued to decrease between 07 and 17
+up_dn_dn_freq <- freqs_win[freqs_win$zt01_mean > 0 &
+                            freqs_win$zt12_mean < 0 &
+                            freqs_win$zt23_mean < 0,]
+nrow(up_dn_dn_freq)
+nrow(up_dn_dn_freq) / nrow(freqs_win)
+# identify windows where allele frequencies decreased between 91 and 96
+# and increased between 96 and 07
+# and continued to increase between 07 and 17
+dn_up_up_freq <- freqs_win[freqs_win$zt01_mean < 0 &
+                            freqs_win$zt12_mean > 0 &
+                            freqs_win$zt23_mean > 0,]
+
+nrow(dn_up_up_freq)
+nrow(dn_up_up_freq) / nrow(freqs_win)
+
+
+```
+
+# Most extreme shifts
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
+freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_50kb_win_10kb_step.txt")
+
+
+# identify windows where allele frequencies increased between each sampling period
+top_increased <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
+                           freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
+                           freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
+
+# identify windows where allele frequencies decreased between each sampling period
+top_decreased <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
+                           freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
+                           freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
+
+# identify windows where allele frequencies increased between 91 and 96
+# and decreased between 96 and 07
+# and continued to decrease between 07 and 17
+top_up_dn_dn_freq <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
+                               freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
+                               freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
+
+# identify windows where allele frequencies decreased between 91 and 96
+# and increased between 96 and 07
+# and continued to increase between 07 and 17
+top_dn_up_up_freq <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
+                               freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
+                               freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
+
+nrow(top_increased)# / nrow(freqs_win)
+nrow(top_decreased)# / nrow(freqs_win)
+nrow(top_up_dn_dn_freq)# / nrow(freqs_win)
+nrow(top_dn_up_up_freq)# / nrow(freqs_win)
+
+
+print("number of 50kb windows with z > genome-wide 99th %ile in each comparison")
 nrow(tops)
 tops$chr_num <- factor(tops$chr, levels = c(1:26))
 
@@ -129,10 +368,38 @@ p <- ggplot(freqs_win, aes(x = win_mid, y = zt01_mean)) +
      #geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
      facet_wrap(~chr_num, ncol = 9)
 
-#p     
-p + geom_vline(aes(xintercept = win_mid), tops)
+p     
+#p + geom_vline(aes(xintercept = win_mid), tops)
+
+# just chr 1
+
+freqs_win1 <- freqs_win[freqs_win$chr == "1",]
+
+p01 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
+     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")
+p02 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
+     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")
+p03 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
+     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")
+
+ 
+
+ggarrange(bxp, dp, bp + rremove("x.text"), 
+          labels = c("A", "B", "C"),
+          ncol = 2, nrow = 2)
 
 ```
+
+## PWS 1991 --> 1996
 
 ## What does the arcsine transformation do
 Maybe use logit transformation instead?

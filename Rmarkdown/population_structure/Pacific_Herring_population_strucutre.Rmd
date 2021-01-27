@@ -29,18 +29,21 @@ pre, code {white-space:pre !important; overflow-x:auto}
 This notebook generates scripts to perform population structure analyses with [PCAngsd](http://www.popgen.dk/software/index.php/PCAngsd),
 [PLINK PCA](https://www.cog-genomics.org/plink/1.9/strat), [NGSadmix](http://www.popgen.dk/software/index.php/NgsAdmix), and [popVAE](https://github.com/kr-colab/popvae).
 
-The data set is a filtered `.vcf` with >800 Pacific herring low coverage genomes:
+The data set is a filtered `.vcf` with 200k SNPs across 892 Pacific herring low coverage genomes:
 
 minimum depth = 600  
 maximum depth = 2000  
 minimum base quality = 20  
 minimum mapping quality = 30  
 minor allele frequency > 5%  
-genotyping rate > 50% for each population (grouped by samping location and year)  
+genotyping rate > 50% for each population (grouped by samping location and year)
 
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
 
-* Load R libraries
-```{r setup, include=TRUE}
+Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
+
+# Load R libraries
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #     install.packages("BiocManager")
@@ -77,7 +80,7 @@ gry<-  '#BBBBBB'
 
 ```
 
-* Load python libraries
+# Load python libraries
 ```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
 import io
 import pandas as pd
@@ -114,7 +117,7 @@ def sbatch_header_loop(job,mem,tasks,hours,infile):
 ```
 
 # Plot population locations
-```{r,fig.width= 7, fig.height= 7}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 theme_set(theme_bw())
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
@@ -186,16 +189,17 @@ example script
 
 #SBATCH --job-name=PCAngsd
 #SBATCH --mem=16G 
-#SBATCH --ntasks=4 
+#SBATCH --ntasks=16 
 #SBATCH -e PCAngsd_%A_%a.err 
-#SBATCH --time=24:00:00  
+#SBATCH --time=144:00:00  
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
 module load pcangsd 
-gzip /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL 
-python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/chr2_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -threads 4 
+gzip /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL 
+python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 -threads 16 
+
 
 #command to run: sbatch script_PCAngsd.sh
 ```
@@ -211,15 +215,17 @@ job_name = 'PCAngsd'
 
 vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
 
-sbatch_header(job_name,'16','4','24')
+sbatch_header(job_name,'16','16','24')
 script = 'script_' + job_name + '.sh'
 o = io.open(script,'a+', newline='\n')
 
 
 o.write('module load pcangsd \n')
-o.write('#gzip /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL \n')
 
-o.write('#python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/chr2_'+vcf_name+'.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/chr1_'+vcf_name+' -threads 4 \n')
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+o.write('#gzip /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL \n')
+o.write('python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/'+vcf_name+' -threads 16 \n')
+
 
 o.write('\n\n#command to run: sbatch '+script)
 o.close()
@@ -227,8 +233,8 @@ o.close()
 ```
 
 ### Plot
-PCA for  Chr 1 (~100k SNPs)  
-```{r}
+PCA using genotype likelihoods 204153 SNPs 
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020_plate_rows.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
@@ -236,8 +242,8 @@ vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/pla
 names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
 vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
 #write.table(vcf_sample_info[c("Sample", "Sequencing.Plate.Individual.No.", "Population.Year","Location","Year.Collected","Sample.ID")],"C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/sample_metadata.txt", row.names = FALSE, quote = FALSE, sep = "\t")
-chr <- "1"
-C <- as.matrix(read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/PCAngsd/chr",chr,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plates_1_through_5_rm.cov", sep = "")))
+
+C <- as.matrix(read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/pcangsd/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.cov"))
 e <- eigen(C)
 pca <-data.frame(Sample=vcf_sample_info$Sample, 
                  pop=vcf_sample_info$Population.Year,
@@ -293,6 +299,8 @@ ggplot(data = pca1)+
   theme_bw()+
   ggtitle("all populations and sampling years")
 
+
+# filter by year
 pca1 <- pca %>% filter(year == "17")
 
 ggplot(data = pca1)+
@@ -360,7 +368,7 @@ example script
 #SBATCH -p high 
 
 module load plink 
-plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 --pca --out /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5
+plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --pca --out /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05
 
 
 #command to run: sbatch script_plink_PCA.sh
@@ -369,8 +377,7 @@ plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf
 ### Generate PLINK PCA scripts
 ```{python,results='hide', eval = FALSE}
 job_name = 'plink_PCA'
-vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
-#vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ30_maxmiss0.5'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
 
 sbatch_header(job_name,'8','4','24')
 script = 'script_' + job_name + '.sh'
@@ -387,16 +394,14 @@ o.close()
 ```
 
 ### Plot
-Genome-wide PCA (~3 million SNPs)
+PCA using hard calls 204153 SNPs 
 
-```{r, echo = FALSE,results='hide'}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 # PLINK pca
 
-eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenvec", header=F, stringsAsFactors = F)
-eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.eigenval", header=F, stringsAsFactors = F)
+eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.eigenvec", header=F, stringsAsFactors = F)
+eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.eigenval", header=F, stringsAsFactors = F)
 
-eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.01.eigenvec", header=F, stringsAsFactors = F)
-eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.01.eigenval", header=F, stringsAsFactors = F)
 
  names(eigenvec)[names(eigenvec)=="V1"] <- "Sample"
  vcf_sample_info <- inner_join(eigenvec,pop_info, by = "Sample")
@@ -411,7 +416,7 @@ eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_fil
  
  prop_explained <- c()
  for (s in eigenval$V1) {
-   print(s / sum(eigenval$V1))
+   #print(s / sum(eigenval$V1))
    prop_explained <- c(prop_explained,round(((s / sum(eigenval$V1))*100),2))
  }
  
@@ -443,17 +448,24 @@ example script
 
 #SBATCH --job-name=NGSadmix
 #SBATCH --mem=8G 
-#SBATCH --ntasks=1 
+#SBATCH --ntasks=4 
 #SBATCH -e NGSadmix_%A_%a.err 
-#SBATCH --time=24:00:00  
+#SBATCH --time=144:00:00  
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
+#git clone https://github.com/Rosemeis/pcangsd.git
+#cd pcangsd/
+#python setup.py build_ext --inplace
+
 module load angsd 
-NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -K 2 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k2_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -P 4 
-NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -K 3 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k3_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -P 4 
-NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.BEAGLE.PL.gz -K 4 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k4_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5 -P 4 
+gzip /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL 
+
+for i in {1..20} 
+do 
+NGSadmix -likes /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL.gz -K $i -o /home/jamcgirr/ph/data/angsd/NGSadmix/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_k$i -P 4 
+done 
 
 
 #command to run: sbatch script_NGSadmix.sh
@@ -462,16 +474,24 @@ NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_ph_filtered_snps_minDP600_maxDP
 ### Generate NGSAdmix scripts
 ```{python,results='hide', eval = FALSE}
 job_name = 'NGSadmix'
-vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
 
-sbatch_header(job_name,'8','1','24')
+sbatch_header(job_name,'8','4','144')
 script = 'script_' + job_name + '.sh'
 o = io.open(script,'a+', newline='\n')
 
+
+o.write('#git clone https://github.com/Rosemeis/pcangsd.git\n')
+o.write('#cd pcangsd/\n')
+o.write('#python setup.py build_ext --inplace\n\n')
+
 o.write('module load angsd \n')
-o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL.gz -K 2 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k2_chr1_'+vcf_name+' -P 4 \n')
-o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL.gz -K 3 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k3_chr1_'+vcf_name+' -P 4 \n')
-o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/chr1_'+vcf_name+'.BEAGLE.PL.gz -K 4 -o /home/jamcgirr/ph/data/angsd/NGSadmix/k4_chr1_'+vcf_name+' -P 4 \n')
+o.write('gzip /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL \n\n')
+
+o.write('for i in {1..20} \n')
+o.write('do \n')
+o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL.gz -K $i -o /home/jamcgirr/ph/data/angsd/NGSadmix/'+vcf_name+'_k$i -P 4 \n')
+o.write('done \n')
 
 
 o.write('\n\n#command to run: sbatch '+script)
@@ -480,9 +500,8 @@ o.close()
 ```
 
 ### Plot
-Admixture Chr 1 (~100k SNPs)
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
 aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
@@ -492,7 +511,7 @@ vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/pla
 names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
 vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
 
-sfiles <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/plates_1_thru_5_removed/", full.names=T)
+sfiles <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/ngsadmix/qfiles/", full.names=T)
 slist <- readQ(files=sfiles,indlabfromfile = FALSE)
 
 onelabset <-vcf_sample_info[,3,drop=FALSE] 
@@ -514,7 +533,7 @@ subsetpops <- c("BC17","CA17","PWS17","SS17","TB17","WA17")
 #subsetpops <- c("SS96","SS06","SS17")
 #subsetpops <- c("BC17","CA17","WA17")
 
-for (i in c(1:5)){
+for (i in c(12,14,15,16,17)){
 p1 <- plotQ(slist[i],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
             sortind="all",grplab = onelabset,subsetgrp=subsetpops,
             grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
@@ -545,46 +564,32 @@ example script
 
 #!/bin/bash
 
-#SBATCH --job-name=popvae_PWS_SS
+#SBATCH --job-name=popvae
 #SBATCH --mem=32G 
 #SBATCH --ntasks=4 
-#SBATCH -e popvae_PWS_SS_%A_%a.err 
-#SBATCH --time=72:00:00  
+#SBATCH -e popvae_%A_%a.err 
+#SBATCH --time=144:00:00  
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load samtools 
-module load bcftools 
-cat /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS91_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS07_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS06_bams_p_1_5_rm.txt > /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt 
-sed -i 's/\/home\/eoziolor\/phpopg\/data\/align\///g' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt 
-sed -i 's/.bam//g' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt 
-bcftools view -S /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt -Oz /home/jamcgirr/ph/data/vcfs/vince/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.vcf.gz -R /home/jamcgirr/ph/data/moments/ld_prune/random_thin_keep.txt --threads 4 > /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz 
 source /home/jamcgirr/apps/my_python3.7/bin/activate 
-popvae.py --infile /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz --out /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin --seed 42 
+popvae.py --infile /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --out /home/jamcgirr/ph/data/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --seed 42 
 
 
-#run: sbatch script_popvae_PWS_SS.sh
+#run: sbatch script_popvae.sh
 ```
 
 ### Generate popVAE scripts
 ```{python,results='hide', eval = FALSE}
-job_name = 'popvae_PWS_SS'
+jjob_name = 'popvae'
 
-sbatch_header(job_name,'32','4','72')
+sbatch_header(job_name,'32','4','144')
 script = 'script_' + job_name + '.sh'
 o = io.open(script,'a+', newline='\n')  
    
-    
-o.write('module load samtools \n')
-o.write('module load bcftools \n')
-o.write('cat /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS17_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS91_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/PWS07_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS96_bams_p_1_5_rm.txt /home/jamcgirr/ph/data/angsd/SFS/thetas/SS06_bams_p_1_5_rm.txt > /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt \n')
-o.write('sed -i \'s/\/home\/eoziolor\/phpopg\/data\/align\///g\' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt \n')
-o.write('sed -i \'s/.bam//g\' /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt \n')
-
-o.write('bcftools view -S /home/jamcgirr/ph/data/popvae/pops_PWS_SS.txt -Oz /home/jamcgirr/ph/data/vcfs/vince/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.vcf.gz -R /home/jamcgirr/ph/data/moments/ld_prune/random_thin_keep.txt --threads 4 > /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz \n')
 o.write('source /home/jamcgirr/apps/my_python3.7/bin/activate \n')
-o.write('popvae.py --infile /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin.vcf.gz --out /home/jamcgirr/ph/data/popvae/PWS_SS_random_thin --seed 42 \n')
+o.write('popvae.py --infile /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --out /home/jamcgirr/ph/data/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --seed 42 \n')
 
 
 o.write('\n\n#run: sbatch '+script)
@@ -594,8 +599,7 @@ o.close()
 ```
 
 ### Plot
-Genome-wide structure (~3 million SNPSs)
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 #theme_set(theme_classic())
 
@@ -608,21 +612,24 @@ vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
 vcf_sample_info$sampleID <- vcf_sample_info$Sample
 
 #load data
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_random_thin_latent_coords.txt",header=T)
+#pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_latent_coords.txt",header=T)
 
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
+#pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
+#names(pd)[1:2] <- c("LD1","LD2")
 #sd <- fread("data/pabu/pabu_test_sample_data.csv") #this has sample metadata for interpreting plots
 
 #merge tables
-dd <- merge(pd,vcf_sample_info,by="sampleID")
+#dd <- merge(pd,vcf_sample_info,by="sampleID")
 
 #plot VAE
-ggplot(data=dd,aes(x=LD1,y=LD2,col=Population.Year))+
-  geom_point()
+#ggplot(data=dd,aes(x=LD1,y=LD2,col=Population.Year))+
+#  geom_point()
 
 #png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/pca.png", height = 5, width = 6.5, units = 'in', res = 600)
 
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
 dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
 ggplot(data = dd)+
   geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
@@ -633,84 +640,71 @@ ggplot(data = dd)+
   ylab("LD2")+
   theme_bw()
 
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_noTB_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
-dd <- merge(pd,vcf_sample_info,by="sampleID")
-dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
-ggplot(data = dd)+
-  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
-  scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
-  scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
-  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
-  xlab("LD1")+
-  ylab("LD2")+
-  theme_bw()
-
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
-dd <- merge(pd,vcf_sample_info,by="sampleID")
-dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
-ggplot(data = dd)+
-  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
-  scale_fill_manual(values=c(grb,red,yel,lir), guide=FALSE)+
-  scale_color_manual(name = "population", values=c(grb,red,yel,lir))+
-  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
-  xlab("LD1")+
-  ylab("LD2")+
-  theme_bw()
-
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
-dd <- merge(pd,vcf_sample_info,by="sampleID")
-dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
-ggplot(data = dd)+
-  geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
-  #scale_fill_manual(values=c(red), guide=FALSE)+
-  scale_color_manual(name = "population", values=c(red))+
-  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
-  xlab("LD1")+
-  ylab("LD2")+
-  theme_bw()
-
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/TB_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
-dd <- merge(pd,vcf_sample_info,by="sampleID")
-dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
-ggplot(data = dd)+
-  geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
-  #scale_fill_manual(values=c(red), guide=FALSE)+
-  scale_color_manual(name = "population", values=c(blu))+
-  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
-  xlab("LD1")+
-  ylab("LD2")+
-  theme_bw()
-
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/SS_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
-dd <- merge(pd,vcf_sample_info,by="sampleID")
-dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
-ggplot(data = dd)+
-  geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
-  #scale_fill_manual(values=c(red), guide=FALSE)+
-  scale_color_manual(name = "population", values=c(bla))+
-  scale_shape_manual(name = "year", values=c(22,23,24,25))+
-  xlab("LD1")+
-  ylab("LD2")+
-  theme_bw()
-
-pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_SS_random_thin_latent_coords.txt",header=T)
-names(pd)[1:2] <- c("LD1","LD2")
-dd <- merge(pd,vcf_sample_info,by="sampleID")
-dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
-ggplot(data = dd)+
-  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
-  scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
-  scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
-  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
-  xlab("LD1")+
-  ylab("LD2")+
-  theme_bw()
-
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+#   scale_fill_manual(values=c(grb,red,yel,lir), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(grb,red,yel,lir))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+#   #scale_fill_manual(values=c(red), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(red))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/TB_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+#   #scale_fill_manual(values=c(red), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(blu))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/SS_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+#   #scale_fill_manual(values=c(red), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(bla))+
+#   scale_shape_manual(name = "year", values=c(22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_SS_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+#   scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
 
 ```
 
