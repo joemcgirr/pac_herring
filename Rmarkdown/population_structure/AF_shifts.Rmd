@@ -218,6 +218,7 @@ z <- rbind(zp,zt)
 p<-ggplot(z, aes(x=z91_96, fill=pop)) +
    geom_density(alpha=0.4)+
    scale_fill_manual(name = "Population",values=c(red,blu))+
+   ylab("density\n") + xlab(expression(paste(Delta, "z 1991-1996")))+
    theme_minimal()
 p
 
@@ -231,6 +232,7 @@ z <- rbind(zp,zt,zs)
 p<-ggplot(z, aes(x=z96_07, fill=pop)) +
    geom_density(alpha=0.4)+
    scale_fill_manual(name = "Population",values=c(red,yel,blu))+
+   ylab("density\n") + xlab(expression(paste(Delta, "z 2007-2017")))+
    theme_minimal()
 p
 
@@ -243,6 +245,7 @@ z <- rbind(zp,zt,zs)
 p<-ggplot(z, aes(x=z07_17, fill=pop)) +
    geom_density(alpha=0.4)+
    scale_fill_manual(name = "Population",values=c(red,yel,blu))+
+   ylab("density\n") + xlab(expression(paste(Delta, "z 2007-2017")))+
    theme_minimal()
 p
 
