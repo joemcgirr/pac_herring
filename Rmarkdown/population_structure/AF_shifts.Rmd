@@ -28,6 +28,7 @@ library(reshape2)
 library(plyranges)
 library(seqinr)
 library(windowscanr)
+library(ggpubr)
 #BiocManager::install("seqinr")
 
   # Get upper triangle of the correlation matrix
@@ -122,7 +123,7 @@ for infile in infiles:
 
 # Transform AFs and average across sliding windows
 
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+```{r, eval = FALSE,message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 #AF is calculated as AC/AN, where AC is total ALT allele count and AN is total allele called in genotypes
 
@@ -178,7 +179,34 @@ freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 
 ```
 
+# Example of genome-wide allele frequency shifts for PWS 1991 --> 1996
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop <- "PWS"
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
+p <- ggplot(freqs_win, aes(x = win_mid, y = zt01_mean)) + 
+     geom_point(size = 1, color = gry,alpha = 0.7, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     #geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
+     facet_wrap(~chr_num, ncol = 9)
+p
+
+```
+
 # Compare magnitude of AF shifts between populations
+
+Shows the distribution of ∆z for each population from
+  
+  - 1991 --> 1996
+  - 1996 --> 2007
+  - 2007 --> 2017
+  
+Does ∆z center around zero? (expected under drift)
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 freqs_win_p <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
@@ -204,12 +232,7 @@ all_pops <- data.frame(chr = freqs_win_p$chr,
                        zt23_s = freqs_win_s$zt23_mean)
 
 
-
-vio_plot <- all_pops[,-c(1:2)]
 all_pops$chr_num <- factor(all_pops$chr, levels = c(1:26))
-
-
-
 
 zp <- data.frame(z91_96 = all_pops$zt01_p,pop = "PWS")
 zt <- data.frame(z91_96 = all_pops$zt01_t,pop = "TB")
@@ -250,84 +273,98 @@ p<-ggplot(z, aes(x=z07_17, fill=pop)) +
 p
 
 
-
-
-p1 <- ggplot(vio_plot,aes(factor(Year.Collected), MEAN_COVERAGE))+
-      geom_violin()+ xlab("year collected") + ylab("mean coverage")+
-      #geom_boxplot(width=0.1)
-      theme_minimal()+
-      geom_jitter(height = 0, width = 0.1, alpha = 0.1)
-
-my_cols <- c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir, "black")
-
-p1 <- vio_plot %>% 
-      gather(key="MesureType", value="Val") %>%
-      ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
-      geom_violin() + xlab("\n") + ylab(expression(paste(Delta, "z")))+
-      scale_fill_manual(name = "Population",values=my_cols,guide=FALSE)+
-      #stat_summary(fun=mean, geom="line")+
-      theme_minimal()+
-      geom_jitter(height = 0, width = 0.1, alpha = 0.1)
-
-      #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
-
-#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/taj_d.png", height = 5, width = 7, units = 'in', res = 600)
-
-p1
-
 ```
 
-# Identify windows where allele frequencies:
+# Identify windows where allele frequencies showed shifts in the same direction
+
+Out of 70234 50kb windows, what percentage consistently:
 
   - increased between each sampling period
   - decreased between each sampling period
-  - increased between 91 and 96, decreased between 96 and 07, and continued to decrease between 07 and 17
-  - decreased between 91 and 96, increased between 96 and 07, and continued to increase between 07 and 17
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
-freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
+pops <- c("PWS","TB")
+#pop <- "TB"
+
+for (pop in pops){
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
 
 # identify windows where allele frequencies increased between each sampling period
 increased_freq <- freqs_win[freqs_win$zt01_mean > 0 &
                             freqs_win$zt12_mean > 0 &
                             freqs_win$zt23_mean > 0,]
-nrow(increased_freq)
-nrow(increased_freq) / nrow(freqs_win)
+#nrow(increased_freq)
+#nrow(increased_freq) / nrow(freqs_win)
 # identify windows where allele frequencies increased between each sampling period
 decreased_freq <- freqs_win[freqs_win$zt01_mean < 0 &
                             freqs_win$zt12_mean < 0 &
                             freqs_win$zt23_mean < 0,]
-nrow(decreased_freq)
-nrow(decreased_freq) / nrow(freqs_win)
-# identify windows where allele frequencies increased between 91 and 96
-# and decreased between 96 and 07
-# and continued to decrease between 07 and 17
-up_dn_dn_freq <- freqs_win[freqs_win$zt01_mean > 0 &
-                            freqs_win$zt12_mean < 0 &
-                            freqs_win$zt23_mean < 0,]
-nrow(up_dn_dn_freq)
-nrow(up_dn_dn_freq) / nrow(freqs_win)
-# identify windows where allele frequencies decreased between 91 and 96
-# and increased between 96 and 07
-# and continued to increase between 07 and 17
-dn_up_up_freq <- freqs_win[freqs_win$zt01_mean < 0 &
-                            freqs_win$zt12_mean > 0 &
-                            freqs_win$zt23_mean > 0,]
+#nrow(decreased_freq)
+#nrow(decreased_freq) / nrow(freqs_win)
 
-nrow(dn_up_up_freq)
-nrow(dn_up_up_freq) / nrow(freqs_win)
+inc <- nrow(increased_freq)
+dec <- nrow(decreased_freq)
+remain <- nrow(freqs_win)-(inc+dec)
+
+p <- pie(c(inc,dec,remain), col = c(red, blu, yel), main = pop,
+      labels = c(paste(round(inc/nrow(freqs_win),3)*100, "%", sep = ""),
+                 paste(round(dec/nrow(freqs_win),3)*100, "%", sep = ""),
+                 paste(round(remain/nrow(freqs_win),3)*100, "%", sep = "")))
+  
+l <- legend("topleft", c("increased", "decreased", "inconsistent"), cex = 0.8,
+   fill = c(red, blu, yel))
+print(p)
+print(l)
+
+}
+
+freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_50kb_win_10kb_step.txt")
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
+
+# identify windows where allele frequencies increased between each sampling period
+increased_freq <- freqs_win[freqs_win$zt12_mean > 0 &
+                            freqs_win$zt23_mean > 0,]
+#nrow(increased_freq)
+#nrow(increased_freq) / nrow(freqs_win)
+# identify windows where allele frequencies increased between each sampling period
+decreased_freq <- freqs_win[freqs_win$zt12_mean < 0 &
+                            freqs_win$zt23_mean < 0,]
+#nrow(decreased_freq)
+#nrow(decreased_freq) / nrow(freqs_win)
+
+inc <- nrow(increased_freq)
+dec <- nrow(decreased_freq)
+remain <- nrow(freqs_win)-(inc+dec)
+pie(c(inc,dec,remain), col = c(red, blu, yel), main = pop,
+    labels = c(paste(round(inc/nrow(freqs_win),3)*100, "%", sep = ""),
+               paste(round(dec/nrow(freqs_win),3)*100, "%", sep = ""),
+               paste(round(remain/nrow(freqs_win),3)*100, "%", sep = "")))
+legend("topright", c("increased", "decreased", "inconsistent"), cex = 0.8,
+   fill = c(red, blu, yel))
 
 
 ```
 
-# Most extreme shifts
+# Identify windows where allele frequencies showed LARGE shifts in the same direction:
+
+Are there any windows that show:
+  - ∆z > 90th percentile across all sampling periods
+  - ∆z < 10th percentile across all sampling periods
+
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
-freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
-freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_50kb_win_10kb_step.txt")
 
+pops <- c("TB","PWS")
+#pop <- "PWS"
+
+for (pop in pops){
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 
 # identify windows where allele frequencies increased between each sampling period
 top_increased <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
@@ -339,110 +376,165 @@ top_decreased <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, 
                            freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
                            freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
 
+print(paste(pop,"increased"))
+top_increased# / nrow(freqs_win)
+print(paste(pop,"decreased"))
+top_decreased# / nrow(freqs_win)
+
+print(hist(c(top_increased$zt01_mean,
+       top_increased$zt12_mean,
+       top_increased$zt23_mean,
+       top_decreased$zt01_mean,
+       top_decreased$zt12_mean,
+       top_decreased$zt23_mean), xlab = expression(paste(Delta, "z")),
+       main = pop, xlim = c(-0.25, 0.3)))
+
+}
+
+```
+
+## PWS chr 18 (windows with strongest positive shift across all sampling periods)
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop <- "PWS"
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
+# identify windows where allele frequencies increased between each sampling period
+top_increased <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
+                           freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
+                           freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
+
+# identify windows where allele frequencies decreased between each sampling period
+top_decreased <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
+                           freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
+                           freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
+
+# PWS chr with strongest positive shift (18)
+
+freqs_win1 <- freqs_win[freqs_win$chr == "18",]
+top_increased1 <- top_increased[top_increased$chr == "18",]
+
+p01 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
+     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+
+     geom_vline(aes(xintercept = win_mid), top_increased1)
+p12 <- ggplot(freqs_win1, aes(x = win_mid, y = zt12_mean)) + 
+     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+
+     geom_vline(aes(xintercept = win_mid), top_increased1)
+p23 <- ggplot(freqs_win1, aes(x = win_mid, y = zt23_mean)) + 
+     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+
+     geom_vline(aes(xintercept = win_mid), top_increased1)
+
+#p + geom_vline(aes(xintercept = win_mid), tops)
+ 
+ggarrange(p01,p12,p23, ncol = 1, nrow = 3)#,
+          #labels = c("A", "B", "C"))
+
+# Find genes in regions
+
+gff <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/annotations/Clupea_harengus.Ch_v2.0.2.100.gff3",header = FALSE, sep = "\t",comment.char = '#')
+#head(gff)
+colnames(gff) <- c("seqnames","source","type","start","end","score","strand","phase","attributes")
+genes <- gff[gff$type=="gene",]
+genes <- genes %>% separate(attributes, c("at1","at2"), remove = FALSE,sep = "Name=") %>% separate(at2, c("gene_name","at3"), extra = "drop",sep = ";")
+genes <- select(genes, -at1,-at3)
+g <- genes[genes$strand == "\\.",]
+#head(genes)
+genes <- droplevels(genes)
+
+genes <- genes %>% as_granges()
+
+names(top_increased)[names(top_increased) == "chr"] <- "seqnames"
+names(top_increased)[names(top_increased) == "win_start"] <- "start"
+names(top_increased)[names(top_increased) == "win_end"] <- "end"
+
+names(top_decreased)[names(top_decreased) == "chr"] <- "seqnames"
+names(top_decreased)[names(top_decreased) == "win_start"] <- "start"
+names(top_decreased)[names(top_decreased) == "win_end"] <- "end"
+
+
+tops <- rbind(top_increased,top_decreased)
+
+tops<- tops %>% as_granges()
+
+genes_overlap <- join_overlap_intersect(tops, genes) %>% as.data.frame()
+
+#write.table(as.data.frame(unique(na.omit(focal_chr_genes$gene_name))), "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/GO/fst_outliers/PWS17_v_TB17_Fst_99percentile_genes.txt", quote= FALSE, row.names = FALSE, col.names = FALSE)
+
+
+```
+
+# Identify windows where allele frequencies showed large shifts after collapse and reversed over time:
+
+  - increased between 91 and 96, decreased between 96 and 07, and continued to decrease between 07 and 17
+  - decreased between 91 and 96, increased between 96 and 07, and continued to increase between 07 and 17
+
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pops <- c("TB","PWS")
+#pop <- "PWS"
+
+for (pop in pops){
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
 # identify windows where allele frequencies increased between 91 and 96
 # and decreased between 96 and 07
 # and continued to decrease between 07 and 17
-top_up_dn_dn_freq <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
+up_dn_dn <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
                                freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
                                freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
 
 # identify windows where allele frequencies decreased between 91 and 96
 # and increased between 96 and 07
 # and continued to increase between 07 and 17
-top_dn_up_up_freq <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
+dn_up_up <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
                                freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
                                freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
 
-nrow(top_increased)# / nrow(freqs_win)
-nrow(top_decreased)# / nrow(freqs_win)
-nrow(top_up_dn_dn_freq)# / nrow(freqs_win)
-nrow(top_dn_up_up_freq)# / nrow(freqs_win)
+print(paste(pop,"up_dn_dn"))
+up_dn_dn# / nrow(freqs_win)
+print(paste(pop,"dn_up_up"))
+dn_up_up# / nrow(freqs_win)
 
+print(hist(c(up_dn_dn$zt01_mean,
+             up_dn_dn$zt12_mean,
+             up_dn_dn$zt23_mean,
+             dn_up_up$zt01_mean,
+             dn_up_up$zt12_mean,
+             dn_up_up$zt23_mean), xlab = expression(paste(Delta, "z")),
+             main = pop))#, xlim = c(-0.25, 0.3)))
 
-print("number of 50kb windows with z > genome-wide 99th %ile in each comparison")
-nrow(tops)
-tops$chr_num <- factor(tops$chr, levels = c(1:26))
-
-p <- ggplot(freqs_win, aes(x = win_mid, y = zt01_mean)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")+ 
-     #geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
-
-p     
-#p + geom_vline(aes(xintercept = win_mid), tops)
-
-# just chr 1
-
-freqs_win1 <- freqs_win[freqs_win$chr == "1",]
-
-p01 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
-     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")
-p02 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
-     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")
-p03 <- ggplot(freqs_win1, aes(x = win_mid, y = zt01_mean)) + 
-     geom_point(size = 2, color = gry,alpha = 0.6, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab(expression(paste(Delta, "z"^"2")))+ xlab("")
-
- 
-
-ggarrange(bxp, dp, bp + rremove("x.text"), 
-          labels = c("A", "B", "C"),
-          ncol = 2, nrow = 2)
+}
 
 ```
 
-## PWS 1991 --> 1996
-
-## What does the arcsine transformation do
-Maybe use logit transformation instead?
-
-http://strata.uga.edu/8370/rtips/proportions.html
-
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-
-t0 <- c(0,0.01,0.02,0.03,0.1,0.2,0.3,1)
-t1 <- rev(t0)
-
-#t0 <- c(0.01,0.05,0.06,0.07,0.10,0,1)
-#t1 <- c(0.02,0.06,0.10,0.20,0.05,1,0)
-
-af <- data.frame(t0 = t0, t1 = t1)
-head(af)
-
-af$t0_transformed_freq <- asin(sqrt(af$t0))
-af$t1_transformed_freq <- asin(sqrt(af$t1))
-
-af$zt01 <- (af$t1_transformed_freq - af$t0_transformed_freq)^2
-af
-
-plot(af$t0,af$t0_transformed_freq, xlab = "t0 allele frequency", ylab = "arcsin(sqrt(t0 af))")
-
-```
 
 # Fst matrix temporal samples (within population comparisons)
 
 ## PWS
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt")
 p91xp96 <- round(mean(fst$Fst01),4)
 p91xp07 <- round(mean(fst$Fst02),4)
 p96xp07 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS17.txt")
 p91xp17 <- round(mean(fst$Fst02),4)
 p96xp17 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt")
 p07xp17 <- round(mean(fst$Fst12),4)
 
 fst_vec <- c(0,p91xp96,p91xp07,p91xp17,
@@ -456,13 +548,11 @@ rownames(fst_mat) <- c("PWS91","PWS96","PWS07","PWS17")
 print(fst_mat)
 upper_tri <- get_upper_tri(fst_mat)
 
-# Melt the correlation matrix
 melted_cormat <- melt(upper_tri, na.rm = TRUE)
-# Heatmap
 ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
  geom_tile(color = "white")+
  scale_fill_gradient(low = blu, high = red, 
-    limit = c(0,0.015), space = "Lab", 
+    limit = c(min(c(fst_mat)[c(fst_mat) > 0]),max(fst_mat)), space = "Lab", 
    name="Fst") +
   theme_minimal()+ xlab("")+ylab("")+
  theme(axis.text.x = element_text(angle = 0, vjust = 0, 
@@ -470,20 +560,21 @@ ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
    theme(axis.text.y = element_text(size = 12))+
  coord_fixed()+
  geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
+
 ```
 
 ## TB
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt")
 p91xp96 <- round(mean(fst$Fst01),4)
 p91xp07 <- round(mean(fst$Fst02),4)
 p96xp07 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt")
 p91xp17 <- round(mean(fst$Fst02),4)
 p96xp17 <- round(mean(fst$Fst12),4)
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB06_TB17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB06_TB17.txt")
 p07xp17 <- round(mean(fst$Fst12),4)
 
 fst_vec <- c(0,p91xp96,p91xp07,p91xp17,
@@ -497,20 +588,18 @@ rownames(fst_mat) <- c("TB91","TB96","TB06","TB17")
 print(fst_mat)
 upper_tri <- get_upper_tri(fst_mat)
 
-# Melt the correlation matrix
 melted_cormat <- melt(upper_tri, na.rm = TRUE)
-# Heatmap
 ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
-geom_tile(color = "white")+
-scale_fill_gradient(low = blu, high = red, 
-   limit = c(0,0.015), space = "Lab", 
-  name="Fst") +
- theme_minimal()+ xlab("")+ylab("")+
-theme(axis.text.x = element_text(angle = 0, vjust = 0, 
-   size = 12, hjust = 0.5))+
-  theme(axis.text.y = element_text(size = 12))+
-coord_fixed()+
-geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
+ geom_tile(color = "white")+
+ scale_fill_gradient(low = blu, high = red, 
+    limit = c(min(c(fst_mat)[c(fst_mat) > 0]),max(fst_mat)), space = "Lab", 
+   name="Fst") +
+  theme_minimal()+ xlab("")+ylab("")+
+ theme(axis.text.x = element_text(angle = 0, vjust = 0, 
+    size = 12, hjust = 0.5))+
+   theme(axis.text.y = element_text(size = 12))+
+ coord_fixed()+
+ geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
 
 ```
 
@@ -518,7 +607,7 @@ geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_SS96_SS06_SS17.txt")
+fst <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_SS96_SS06_SS17.txt")
 p96xp07 <- round(mean(fst$Fst01),4)
 p96xp17 <- round(mean(fst$Fst02),4)
 p07xp17 <- round(mean(fst$Fst12),4)
@@ -534,109 +623,85 @@ rownames(fst_mat) <- c("SS96","SS06","SS17")
 print(fst_mat)
 upper_tri <- get_upper_tri(fst_mat)
 
-# Melt the correlation matrix
 melted_cormat <- melt(upper_tri, na.rm = TRUE)
-# Heatmap
 ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
-geom_tile(color = "white")+
-scale_fill_gradient(low = blu, high = red, 
-   limit = c(0,0.015), space = "Lab", 
-  name="Fst") +
- theme_minimal()+ xlab("")+ylab("")+
-theme(axis.text.x = element_text(angle = 0, vjust = 0, 
-   size = 12, hjust = 0.5))+
-  theme(axis.text.y = element_text(size = 12))+
-coord_fixed()+
-geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
-
+ geom_tile(color = "white")+
+ scale_fill_gradient(low = blu, high = red, 
+    limit = c(min(c(fst_mat)[c(fst_mat) > 0]),max(fst_mat)), space = "Lab", 
+   name="Fst") +
+  theme_minimal()+ xlab("")+ylab("")+
+ theme(axis.text.x = element_text(angle = 0, vjust = 0, 
+    size = 12, hjust = 0.5))+
+   theme(axis.text.y = element_text(size = 12))+
+ coord_fixed()+
+ geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
 
 ```
 
 # PWS Fst windows
-## pre-spill vs. post-spill
+Which loci are consistently differentiated between sampling periods
 
-Which loci are consistently divergent in pre-spill vs. post-spill comparisons?
-
-Find windows that show high Fst in all comparisons with 1991.
-
-intersect((T0 vs. T1),(T0 vs. T2),(T0 vs. T3))
+Find windows that show high Fst in 1991 v 1996, 1996 v 2007, and 2007 - 2017 comparisons
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/", full.names=T)
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/", full.names=T)
 #fsts <- fsts[1]
 
 
-fst1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt", header = TRUE, stringsAsFactors = FALSE)
-fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt", header = TRUE, stringsAsFactors = FALSE)
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt", header = TRUE, stringsAsFactors = FALSE)
+fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt", header = TRUE, stringsAsFactors = FALSE)
+names(fst2) <- c("region","chr","midPos","Nsites","Fst02","Fst03","Fst23","PBS0","PBS2","PBS3")
+#fst1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt", header = TRUE, stringsAsFactors = FALSE)
+#fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt", header = TRUE, stringsAsFactors = FALSE)
 
-#fst1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt", header = TRUE, stringsAsFactors = FALSE)
-#fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt", header = TRUE, stringsAsFactors = FALSE)
+fst$Fst03 <- fst2$Fst03
+fst$Fst23 <- fst2$Fst23
+
+fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
+fst$chr_num <- factor(fst$chr, levels = c(1:26))
 
 
-fst1$Fst03 <- fst2$Fst02
+# identify windows where allele frequencies increased between each sampling period
+high_fst <- fst[fst$Fst01 >= quantile(fst$Fst01, .99)[[1]] &
+                fst$Fst12 >= quantile(fst$Fst12, .99)[[1]] &
+                fst$Fst23 >= quantile(fst$Fst23, .99)[[1]],]
 
-fst1 <- fst1 %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
-fst1$chr_num <- factor(fst1$chr, levels = c(1:26))
+head(high_fst)
+nrow(high_fst)
 
-t0102 <- fst1[fst1$Fst01 >= quantile(fst1$Fst01, .99)[[1]] & fst1$Fst02 >= quantile(fst1$Fst02, .99)[[1]],]
-t03 <- fst1[fst1$Fst03 >= quantile(fst1$Fst03, .99)[[1]],]
-
-test <- merge(t0102,t03, by = c("chr","midPos"))
-print("number of 50kb windows with Fst > genome-wide 99th %ile in each comparison")
-nrow(test)
-test$chr_num <- factor(test$chr, levels = c(1:26))
-
-p <- ggplot(fst1, aes(x = midPos, y = Fst01)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+p <- ggplot(fst, aes(x = midPos, y = Fst01)) + 
+     geom_point(size = 1, color = gry,alpha = 0.6, shape = 1)+
      theme_minimal()+
      theme(axis.text.x=element_blank())+
      ylab("Fst\n")+ xlab("")+ 
      geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
+     facet_wrap(~chr_num, ncol = 9)+
+  ggtitle("1991 - 1996")
 
-#p     
-p + geom_vline(aes(xintercept = midPos), test)
+p + geom_vline(aes(xintercept = midPos), high_fst)
 
-```
-
-## oil exposed vs. not exposed
-Which loci are consistently divergent in (oil exposed vs. not exposed) comparisons?
-
-Find windows that show high Fst in all comparisons with 1996.
-
-intersect((T1 vs. T0),(T1 vs. T2),(T1 vs. T3))
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/", full.names=T)
-#fsts <- fsts[1]
-
-fst1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt", header = TRUE, stringsAsFactors = FALSE)
-fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS17.txt", header = TRUE, stringsAsFactors = FALSE)
-
-#fst1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt", header = TRUE, stringsAsFactors = FALSE)
-#fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/sliding_window/folded/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt", header = TRUE, stringsAsFactors = FALSE)
-
-
-fst1$Fst13 <- fst2$Fst12
-
-fst1 <- fst1 %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
-fst1$chr_num <- factor(fst1$chr, levels = c(1:26))
-
-t0112 <- fst1[fst1$Fst01 >= quantile(fst1$Fst01, .99)[[1]] & fst1$Fst12 >= quantile(fst1$Fst12, .99)[[1]],]
-t13 <- fst1[fst1$Fst13 >= quantile(fst1$Fst13, .99)[[1]],]
-
-test <- merge(t0112,t13, by = c("chr","midPos"))
-print("number of 50kb windows with Fst > genome-wide 99th %ile in each comparison")
-nrow(test)
-test$chr_num <- factor(test$chr, levels = c(1:26))
-
-p <- ggplot(fst1, aes(x = midPos, y = Fst01)) + 
-     geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
+p <- ggplot(fst, aes(x = midPos, y = Fst12)) + 
+     geom_point(size = 1, color = gry,alpha = 0.6, shape = 1)+
      theme_minimal()+
      theme(axis.text.x=element_blank())+
      ylab("Fst\n")+ xlab("")+ 
      geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
+     facet_wrap(~chr_num, ncol = 9)+
+  ggtitle("1996 - 2007")
 
-#p     
-p + geom_vline(aes(xintercept = midPos), test)
+p + geom_vline(aes(xintercept = midPos), high_fst)
+
+p <- ggplot(fst, aes(x = midPos, y = Fst23)) + 
+     geom_point(size = 1, color = gry,alpha = 0.6, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab("Fst\n")+ xlab("")+ 
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
+     facet_wrap(~chr_num, ncol = 9)+
+  ggtitle("2007 - 2017")
+
+p + geom_vline(aes(xintercept = midPos), high_fst)
+
 
 ```
+
+

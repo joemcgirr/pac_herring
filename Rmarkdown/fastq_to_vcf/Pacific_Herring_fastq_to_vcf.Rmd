@@ -320,6 +320,32 @@ an <- aov(pop_info_bams$PCT_1X~factor(pop_info_bams$Location))
 
 ```
 
+# create gvcfs from bam files
+use gatk Haplotype caller
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=gvcf
+#SBATCH --mem=16G 
+#SBATCH --ntasks=4 
+#SBATCH -e gvcf_%A_%a.err 
+#SBATCH --time=06-00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load R 
+module load maven 
+module load java 
+module load GATK/4.1.4.1 
+
+gatk HaplotypeCaller --java-options "-Xmx14g -XX:ParallelGCThreads=4" -R /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -I /home/jamcgirr/ph/data/hi_cov/PH_Sitka_93.sort.dedup.bam -O /home/jamcgirr/ph/data/hi_cov/PH_Sitka_93.raw.g.vcf --emit-ref-confidence GVCF 
+
+#run: sbatch script_gvcf.sh
+```
+
 # Combine `g.vcfs` to create SNP vcf
 
 ## Make a database for each of the 26 chromosomes
@@ -778,21 +804,23 @@ example script
 ```{bash,eval=FALSE,class.source = 'fold-show'}
 #!/bin/bash
 
-#SBATCH --job-name=isec
-#SBATCH --mem=16G 
+#SBATCH --job-name=final_subset_0.5
+#SBATCH --mem=8G 
 #SBATCH --ntasks=4 
-#SBATCH -e isec_%A_%a.err 
-#SBATCH --time=144:00:00  
+#SBATCH -e final_subset_0.5_%A_%a.err 
+#SBATCH --time=144:00:00 
 #SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load bcftools 
-bcftools isec -n=14 -p isec_test --threads 4 /home/jamcgirr/ph/data/combine_gvcfs/population_BC17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_CA17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS07_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_PWS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_SS96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB06_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB17_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB91_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_TB96_filtered_snps.vcf.gz /home/jamcgirr/ph/data/combine_gvcfs/population_WA17_filtered_snps.vcf.gz 
+module load bcftools
+#bcftools index /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf 
+bcftools view -R /home/jamcgirr/ph/data/combine_gvcfs/isec_test/sites.txt /home/jamcgirr/ph/data/combine_gvcfs/merged_filtered_snps.bcf -Oz > /home/jamcgirr/ph/data/combine_gvcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz
+bcftools index /home/jamcgirr/ph/data/combine_gvcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz 
 
 
+#command to run: sbatch script_final_subset_0.5.sh
 
-#run: sbatch script_isec.sh
 ```
 
 ### Generate final maf scripts

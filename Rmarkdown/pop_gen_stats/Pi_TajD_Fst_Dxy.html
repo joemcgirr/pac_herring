@@ -11,7 +11,7 @@
 
 <meta name="author" content="Joe McGirr" />
 
-<meta name="date" content="2021-01-27" />
+<meta name="date" content="2021-02-10" />
 
 <title>Fst_Dxy_TajimaD_Pi</title>
 
@@ -2926,7 +2926,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Fst_Dxy_TajimaD_Pi</h1>
 <h4 class="author">Joe McGirr</h4>
-<h4 class="date">2021-01-27</h4>
+<h4 class="date">2021-02-10</h4>
 
 </div>
 
@@ -3101,10 +3101,105 @@ for infile in infiles:
 # EST run time ~15min</code></pre>
 </div>
 </div>
+<div id="make-2d-sfs-for-population-pairs" class="section level2">
+<h2><span class="header-section-number">4.3</span> Make 2D SFS for population pairs</h2>
+<p>example script</p>
+<pre class="bash fold-show"><code>#!/bin/bash
+
+#SBATCH --job-name=WA17_CA17_2d_sfs
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e WA17_CA17_2d_sfs_%A_%a.err 
+#SBATCH --time=24:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+/home/jamcgirr/apps/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/WA17.saf.idx /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/CA17.saf.idx -fold 1 -P 4 &gt; /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/folded_WA17_CA17.sfs 
+/home/jamcgirr/apps/angsd/misc/realSFS /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/WA17.saf.idx /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/CA17.saf.idx -P 4 &gt; /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/unfolded_WA17_CA17.sfs 
+
+
+#command to run: sbatch script_WA17_CA17_2d_sfs.sh
+</code></pre>
+<div id="generate-2d-sfs-scripts" class="section level3">
+<h3><span class="header-section-number">4.3.1</span> Generate 2D SFS scripts</h3>
+<pre class="python"><code>job_name = &#39;_2d_sfs&#39;
+
+vcf_name = &#39;ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05&#39;
+realSFS = &#39;/home/jamcgirr/apps/angsd/misc/realSFS&#39;
+wk_dir = &#39;/home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/&#39;
+saf_dir = &#39;/home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/&#39;
+
+infiles = [&quot;BC17_CA17&quot;,&quot;BC17_WA17&quot;,&quot;PWS07_PWS17&quot;,&quot;PWS07_SS06&quot;,&quot;PWS17_BC17&quot;,&quot;PWS17_CA17&quot;,&quot;PWS17_SS17&quot;,&quot;PWS17_WA17&quot;,&quot;PWS91_PWS07&quot;,&quot;PWS91_PWS17&quot;,&quot;PWS91_PWS96&quot;,&quot;PWS96_PWS07&quot;,&quot;PWS96_PWS17&quot;,&quot;PWS96_SS96&quot;,&quot;SS06_SS17&quot;,&quot;SS17_BC17&quot;,&quot;SS17_CA17&quot;,&quot;SS17_WA17&quot;,&quot;SS96_SS06&quot;,&quot;SS96_SS17&quot;,&quot;TB06_PWS07&quot;,&quot;TB06_SS06&quot;,&quot;TB06_TB17&quot;,&quot;TB17_BC17&quot;,&quot;TB17_CA17&quot;,&quot;TB17_PWS17&quot;,&quot;TB17_SS17&quot;,&quot;TB17_WA17&quot;,&quot;TB91_TB06&quot;,&quot;TB91_TB17&quot;,&quot;TB91_TB96&quot;,&quot;TB96_PWS96&quot;,&quot;TB96_SS96&quot;,&quot;TB96_TB06&quot;,&quot;TB96_TB17&quot;,&quot;WA17_CA17&quot;]
+
+for infile in infiles:
+    script = &#39;script_&#39; + infile + job_name + &#39;.sh&#39;
+    sbatch_header_loop(job_name,&#39;8&#39;,&#39;4&#39;,&#39;24&#39;, infile)
+    o = io.open(script,&#39;a+&#39;, newline=&#39;\n&#39;)
+    
+    
+    pops = &#39;&#39;.join(infile).split(&quot;_&quot;)
+    o.write(realSFS+&#39; &#39;+saf_dir+pops[0]+&#39;.saf.idx &#39;+saf_dir+pops[1]+&#39;.saf.idx -fold 1 -P 4 &gt; &#39;+wk_dir+&#39;folded_&#39;+infile+&#39;.sfs \n&#39;)
+    o.write(realSFS+&#39; &#39;+saf_dir+pops[0]+&#39;.saf.idx &#39;+saf_dir+pops[1]+&#39;.saf.idx -P 4 &gt; &#39;+wk_dir+&#39;unfolded_&#39;+infile+&#39;.sfs \n&#39;)
+
+    
+    o.write(&#39;\n\n#command to run: sbatch &#39;+script)
+    o.close()</code></pre>
+</div>
+</div>
+<div id="calculate-fst-and-pbs-in-50kb-sliding-windows" class="section level2">
+<h2><span class="header-section-number">4.4</span> Calculate Fst and PBS in 50kb sliding windows</h2>
+<p>example script</p>
+<pre class="bash fold-show"><code>#!/bin/bash
+
+#SBATCH --job-name=SS96_SS06_SS17_fst_pbs_folded
+#SBATCH --mem=8G 
+#SBATCH --ntasks=1 
+#SBATCH -e SS96_SS06_SS17_fst_pbs_folded_%A_%a.err 
+#SBATCH --time=24:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+/home/jamcgirr/apps/angsd/misc/realSFS fst index /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/SS96.saf.idx /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/SS06.saf.idx /home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/SS17.saf.idx -sfs /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/folded_SS96_SS06.sfs -sfs /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/folded_SS96_SS17.sfs -sfs /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/folded_SS06_SS17.sfs -fold 1 -fstout /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/folded_SS96_SS06_SS17_persite 
+/home/jamcgirr/apps/angsd/misc/realSFS fst stats2 /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/folded_SS96_SS06_SS17_persite.fst.idx -win 50000 -step 10000 &gt; /home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_SS96_SS06_SS17.txt 
+
+
+#command to run: sbatch script_SS96_SS06_SS17_fst_pbs_folded.sh</code></pre>
+<div id="generate-fst-pbs-scripts" class="section level3">
+<h3><span class="header-section-number">4.4.1</span> Generate Fst PBS scripts</h3>
+<pre class="python"><code>job_name = &#39;_fst_pbs_folded&#39;
+
+vcf_name = &#39;ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05&#39;
+realSFS = &#39;/home/jamcgirr/apps/angsd/misc/realSFS&#39;
+wk_dir = &#39;/home/jamcgirr/ph/data/angsd/SFS/fst_pbs/maf05/&#39;
+saf_dir = &#39;/home/jamcgirr/ph/data/angsd/SFS/vcf/maf05/&#39;
+
+infiles = [&quot;BC17_WA17_CA17&quot;,&quot;PWS17_SS17_BC17&quot;,&quot;PWS17_SS17_CA17&quot;,&quot;PWS17_SS17_WA17&quot;,&quot;TB17_PWS17_BC17&quot;,&quot;TB17_PWS17_CA17&quot;,&quot;TB17_PWS17_SS17&quot;,&quot;TB17_PWS17_WA17&quot;,&quot;TB06_PWS07_SS06&quot;,&quot;TB96_PWS96_SS96&quot;,&quot;PWS91_PWS07_PWS17&quot;,&quot;PWS91_PWS96_PWS07&quot;,&quot;PWS91_PWS96_PWS17&quot;,&quot;TB91_TB06_TB17&quot;,&quot;TB91_TB96_TB06&quot;,&quot;TB91_TB96_TB17&quot;,&quot;SS96_SS06_SS17&quot;]
+
+for infile in infiles:
+    script = &#39;script_&#39; + infile + job_name + &#39;.sh&#39;
+    sbatch_header_loop(job_name,&#39;8&#39;,&#39;1&#39;,&#39;24&#39;, infile)
+    o = io.open(script,&#39;a+&#39;, newline=&#39;\n&#39;)
+    
+    
+    pops = &#39;&#39;.join(infile).split(&quot;_&quot;)
+    #o.write(realSFS+&#39; fst index &#39;+saf_dir+&#39;population_&#39;+pops[0]+&#39;_&#39;+vcf_name+&#39;.saf.idx &#39;+saf_dir+&#39;population_&#39;+pops[1]+&#39;_&#39;+vcf_name+&#39;.saf.idx -sfs &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[1]+&#39;.sfs -fold 1 -fstout &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[1]+&#39;persite \n&#39;)
+    #o.write(realSFS+&#39; fst index &#39;+saf_dir+&#39;population_&#39;+pops[0]+&#39;_&#39;+vcf_name+&#39;.saf.idx &#39;+saf_dir+&#39;population_&#39;+pops[2]+&#39;_&#39;+vcf_name+&#39;.saf.idx -sfs &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[2]+&#39;.sfs -fold 1 -fstout &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[2]+&#39;persite \n&#39;)
+    #o.write(realSFS+&#39; fst index &#39;+saf_dir+&#39;population_&#39;+pops[1]+&#39;_&#39;+vcf_name+&#39;.saf.idx &#39;+saf_dir+&#39;population_&#39;+pops[2]+&#39;_&#39;+vcf_name+&#39;.saf.idx -sfs &#39;+wk_dir+&#39;folded_&#39;+pops[1]+&#39;_&#39;+pops[2]+&#39;.sfs -fold 1 -fstout &#39;+wk_dir+&#39;folded_&#39;+pops[1]+&#39;_&#39;+pops[2]+&#39;persite \n\n&#39;)
+
+    o.write(realSFS+&#39; fst index &#39;+saf_dir+pops[0]+&#39;.saf.idx &#39;+saf_dir+pops[1]+&#39;.saf.idx &#39;+saf_dir+pops[2]+&#39;.saf.idx -sfs &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[1]+&#39;.sfs -sfs &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[2]+&#39;.sfs -sfs &#39;+wk_dir+&#39;folded_&#39;+pops[1]+&#39;_&#39;+pops[2]+&#39;.sfs -fold 1 -fstout &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[1]+&#39;_&#39;+pops[2]+&#39;_persite \n&#39;)
+    o.write(realSFS+&#39; fst stats2 &#39;+wk_dir+&#39;folded_&#39;+pops[0]+&#39;_&#39;+pops[1]+&#39;_&#39;+pops[2]+&#39;_persite.fst.idx -win 50000 -step 10000 &gt; &#39;+wk_dir+&#39;fst_pbs_50kb_win_10kb_step_folded_&#39;+pops[0]+&#39;_&#39;+pops[1]+&#39;_&#39;+pops[2]+&#39;.txt \n&#39;)
+
+    
+    o.write(&#39;\n\n#command to run: sbatch &#39;+script)
+    o.close()</code></pre>
+</div>
+</div>
 <div id="plot-fst-and-pbs" class="section level2">
-<h2><span class="header-section-number">4.3</span> Plot Fst and PBS</h2>
+<h2><span class="header-section-number">4.5</span> Plot Fst and PBS</h2>
 <div id="by-chromosome" class="section level3">
-<h3><span class="header-section-number">4.3.1</span> By Chromosome</h3>
+<h3><span class="header-section-number">4.5.1</span> By Chromosome</h3>
 <pre class="r fold-show"><code>pop_names = c(&quot;PWS91&quot;,&quot;PWS96&quot;,&quot;PWS07&quot;,&quot;PWS17&quot;,&quot;TB91&quot;,&quot;TB96&quot;,&quot;TB06&quot;,&quot;TB17&quot;,&quot;SS96&quot;,&quot;SS06&quot;,&quot;SS17&quot;,&quot;BC17&quot;,&quot;WA17&quot;,&quot;CA17&quot;)
 
 pop0 &lt;- &quot;TB17&quot;
@@ -3189,7 +3284,7 @@ print(p)</code></pre>
 <pre class="r fold-show"><code>#}</code></pre>
 </div>
 <div id="genome-wide-mean-fst-2017-samples" class="section level3">
-<h3><span class="header-section-number">4.3.2</span> Genome-wide mean Fst 2017 samples</h3>
+<h3><span class="header-section-number">4.5.2</span> Genome-wide mean Fst 2017 samples</h3>
 <p>matrix 2017 samples</p>
 <pre class="r fold-show"><code>fsts &lt;- list.files(path=&quot;C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/&quot;, full.names=T)
 

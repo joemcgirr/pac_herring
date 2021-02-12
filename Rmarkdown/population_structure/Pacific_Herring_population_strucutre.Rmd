@@ -545,6 +545,18 @@ plot(p1$plot[[1]])
 #https://github.com/alexkrohn/AmargosaVoleTutorials/blob/master/ngsAdmix_tutorial.md
 
 
+# (for log in `ls *.log`; do grep -Po 'like=\K[^ ]+' $log; done) > logfile
+
+# some jobs didnt finish k19 and k20, so just using 18
+
+logs <- as.data.frame(read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/ngsadmix/likelihoods_all_reps.txt", header = TRUE))
+logs <- logs[logs$K < 19,]
+logs$K <- c(rep("1", 10), rep("2", 10), rep("3", 10), rep("4", 
+    10), rep("5", 10), rep("6", 10), rep("7", 10), rep("8", 10))
+write.table(logs[, c(2, 1)], "logfile_formatted", row.names = F, 
+    col.names = F, quote = F)
+
+
 # source("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/evalAdmix/visFuns.R")
 # 
 # r<-read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/evalAdmix/eval_k3_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.# 05_minQ20_maxmiss0.5")
