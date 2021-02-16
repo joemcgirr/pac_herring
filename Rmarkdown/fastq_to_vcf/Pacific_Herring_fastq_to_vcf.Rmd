@@ -843,6 +843,19 @@ o.close()
 
 ```
 
+## Plot depth and number of samples genotyped (DP and NS)
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.DP.NS.info", header = FALSE, stringsAsFactors = FALSE)
+head(info)
+hist(info$V3, ylab = "DP", main = "")
+hist(info$V4, ylab = "NS", main = "")
+
+nrow(info[info$V3 > 1400,])
+nrow(info[info$V3 > 1600 & info$V4 > 700,])
+
+
+```
 
 
 

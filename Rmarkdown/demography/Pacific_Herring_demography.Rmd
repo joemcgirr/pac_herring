@@ -1,0 +1,180 @@
+---
+title: "Pacific Herring demography"
+author: "Joe McGirr"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: no
+    df_print: paged
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_depth: 5
+editor_options: 
+  chunk_output_type: console
+---
+
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
+# Summary
+This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs across 892 low coverage genomes. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pacific_Hering_demography.Rmd)
+
+The `.vcf` was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
+
+The data set is a filtered `.vcf` with 892 Pacific herring low coverage genomes:
+
+minimum depth = 600  
+maximum depth = 2000  
+minimum base quality = 20  
+minimum mapping quality = 30  
+genotyping rate > 50% for each population (grouped by sampling location and year)
+
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf`
+
+Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
+
+# Load R libraries and set color palette 
+```{r setup,message=FALSE, warning=FALSE,class.source = 'fold-show'}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(ggpubr)
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+# Load python libraries
+```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
+import io
+import pandas as pd
+import numpy as np
+import math
+
+def sbatch_header(job,mem,tasks,hours):
+    #sbatch submission script header
+    script = 'script_' + job + '.sh'
+    outfile = io.open(script,'w', newline='\n')    
+    outfile.write('#!/bin/bash\n\n#SBATCH --job-name='+job+'\n')
+    outfile.write('#SBATCH --mem='+mem+'G \n')
+    outfile.write('#SBATCH --ntasks='+tasks+' \n')
+    outfile.write('#SBATCH -e '+job+'_%A_%a.err \n')
+    outfile.write('#SBATCH --time='+hours+':00:00  \n')
+    outfile.write('#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc\n#SBATCH --mail-type=ALL\n')
+    outfile.write('#SBATCH -p high \n\n')
+    outfile.close()
+    
+def sbatch_header_loop(job,mem,tasks,hours,infile):
+    #sbatch submission script header
+    script = 'script_' + infile + job + '.sh'
+    outfile = io.open(script,'w', newline='\n') 
+    jobname= infile + job   
+    outfile.write('#!/bin/bash\n\n#SBATCH --job-name='+jobname+'\n')
+    outfile.write('#SBATCH --mem='+mem+'G \n')
+    outfile.write('#SBATCH --ntasks='+tasks+' \n')
+    outfile.write('#SBATCH -e '+jobname+'_%A_%a.err \n')
+    outfile.write('#SBATCH --time='+hours+':00:00 \n')
+    outfile.write('#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc\n#SBATCH --mail-type=ALL\n')
+    outfile.write('#SBATCH -p high \n\n')
+    outfile.close()
+
+```
+
+
+# LD prune master `.vcf`
+
+from fantastic beasts, Mikhail Matz 2017:
+there is a concern that high variation in coverage across samples and populations might
+affect ANGSD statistics; to avoid this potential issue it is recommended to discard the lowest
+coverage outliers and down-sample reads from highest-coverage outliers (J. Ross-Ibarra, pers.comm.). 
+
+Solution: before generating SFS, use higher minDP threshold and higher genotyping rate.
+Then LD prune and create 2dSFS for populations.
+
+LD r2 < 0.01 within sliding windows (500 SNP window, 50 SNP step)
+
+Make a list of unlinked sites to subset `.vcf`
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=LD
+#SBATCH --mem=30G 
+#SBATCH --ntasks=8 
+#SBATCH -e LD_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load plink 
+plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5 --indep-pairwise 500 50 0.1 --r2 --out /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1 --threads 8 
+# make tab delimited
+#sed 's/:/\t/g' /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in > /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in.tab 
+
+module load bcftools 
+bcftools view -R /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in.tab /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz -Oz --threads 8 > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz 
+bcftools query -f '%CHROM %POS %DP %NS\n' /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.DP.NS.info 
+#bcftools filter -Oz -i 'INFO/DP>1300' /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz -o /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP1300_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz 
+
+
+
+#command to run: sbatch script_LD.sh
+```
+
+## Generate sites script
+```{python,results='hide', eval = FALSE}
+job_name = 'LD'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5'
+
+sbatch_header(job_name,'30','8','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('module load plink \n')
+o.write('plink --file /home/jamcgirr/ph/data/vcfs/'+vcf_name+' --indep-pairwise 500 50 0.1 --r2 --out /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_500_50_0.1 --threads 8 \n') 
+o.write('#sed \'s/:/\t/g\' /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_500_50_0.1.prune.in > /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_500_50_0.1.prune.in.tab \n')
+
+#run sbatch submission 
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+```
+
+
+## Plot distribution of depth and number of samples genotyped
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.DP.NS.info", header = FALSE, stringsAsFactors = FALSE)
+head(info)
+hist(info$V3, ylab = "DP", main = "")
+hist(info$V4, ylab = "NS", main = "")
+
+nrow(info[info$V3 > 1400,])
+nrow(info[info$V3 > 1600 & info$V4 > 700,])
+
+
+```
+
+
