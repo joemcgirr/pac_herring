@@ -9,10 +9,9 @@
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load plink 
-plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm --indep-pairwise 500 50 0.1 --out /home/jamcgirr/ph/data/angsd/SFS/downsample/ld_prune/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_500_50_0.1 --threads 8 
-sed 's/:/	/g' /home/jamcgirr/ph/data/angsd/SFS/downsample/ld_prune/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_500_50_0.1.prune.in > /home/jamcgirr/ph/data/angsd/SFS/downsample/ld_prune/ld_pruned_keep.txt 
-/home/jamcgirr/apps/angsd_sep_20/angsd/angsd sites index /home/jamcgirr/ph/data/angsd/SFS/downsample/ld_prune/ld_pruned_keep.txt 
+module load bcftools 
+bcftools view -R /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in.tab /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz -Oz --threads 8 > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz 
+bcftools query -f '%CHROM %POS %DP %NS\n' /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.DP.NS.info 
 
 
-#command to run: sbatch script_LD_prune.sh
+#run: sbatch script_LD_prune.sh

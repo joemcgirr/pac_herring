@@ -9,10 +9,10 @@
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-#sed -i 's/pop0/TB17/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
-#sed -i 's/pop1/PWS17/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
-#sed -i 's/REF/Ingroup/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
-#sed -i 's/OUT/Outgroup/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
+sed -i 's/pop0/TB17/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
+sed -i 's/pop1/PWS17/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
+sed -i 's/REF/Ingroup/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
+sed -i 's/OUT/Outgroup/g' /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/TB17_PWS17_dadi_snp.data 
 source /home/jamcgirr/apps/my_python3.7/bin/activate 
 python moments_Run_Optimizations.py 
 #python Simulate_and_Optimize.py 

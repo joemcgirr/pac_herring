@@ -1,0 +1,98 @@
+---
+title: "Herring Population Collapse and Lack of Recovery"
+author: "Joe McGirr"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: no
+    df_print: paged
+    number_sections: no
+    theme: paper
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_depth: 5
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(reshape2)
+library(plyranges)
+library(seqinr)
+library(windowscanr)
+library(ggpubr)
+#BiocManager::install("seqinr")
+
+  # Get upper triangle of the correlation matrix
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+    get_lower_tri<-function(cormat){
+    cormat[upper.tri(cormat)] <- NA
+    return(cormat)
+  }
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+# Background
+The Pacific herring fishery in Prince William Sound, Alaska declined by 75% from 1988 to 1993 and has yet to recover 27 years later. The Exxon Valdez oil spill affected most spawning grounds in PWS, exposing over 50% of embryos to damaging levels of oil in the Spring of 1989. Major disease outbreaks have cycled through the population since 1993. 
+Given a generation interval of 6 years and lifespan ~8 years, we know that:
+
+1.	None of the pre-collapse samples collected in 1991 were exposed to oil as embryos.
+2.	A subset of the post-collapse samples collected in 1996 descended from oil spill survivors.
+3.	None of the post-collapse samples collected in 2007 and 2017 were directly exposed to oil.
+
+# Hypotheses and Evidence 
+
+## 1. The decline in population size in Prince William Sound between 1991 and 1996 was proportionally larger than declines in Togiak Bay and Sitka Sound.
+
+We expect that estimates of short-term effective population size using temporal changes in allele frequency (Ne = t / F) will show:
+
+1.	A larger decline in Ne in PWS than TB between 1991 and 1996.
+2.	Continued decline in Ne in PWS through 2017 as selection driven by disease outbreaks further reduced genetic diversity.
+3.	A larger decline in Ne in PWS than TB and SS between 1996-2006 and 2006-2017.
+
+Alternatively, we expect that estimates of long-term effective population size using Ө = 4Neµ will not be affected by recent changes in population size in any population.
+
+## 2. The PWS population experienced a shift between two selection pressures over time. 
+
+In 1989 during the oil spill, selection favored alleles conferring reduced sensitivity to embryonic oil exposure. Between 1993 and 2017, selection favored alleles conferring disease resistance. It is possible that alleles reducing sensitivity to pollutants also compromise immune function. We can understand how this shift in selection pressures influenced population recovery by measuring temporal covariance in allele frequency change. 
+
+We expect that measures of temporal covariance:
+
+1.	Will be negative in PWS, reflecting a change in selection pressure between 1991-1996 versus 1996-2007 and 2007-2017.
+2.	Will be near zero or be positive in SS and TB where selection regimes have remained more stable. 
+
+We can also identify specific genomic regions responding to shifts in selection pressures by identifying alleles showing large frequency changes over time. The summary statistic ∆z is the difference in arcsine square-root transformed minor allele frequencies between sampling periods. 
+
+We expect:
+
+1.  Alleles showing large ∆z between 1991 and 1996 will be more likely to show ∆z in the opposite direction between 1996 and 2006 in PWS compared to TB, reflecting the unique change in selection pressure in PWS.
+2.  Alleles showing large ∆z in the same direction between all sampling periods in all populations are influenced by shared selection pressures. 
+
+ 
+
+
+

@@ -28,13 +28,14 @@ This notebook generates scripts for demographic inference in Pacific herring pop
 
 The `.vcf` was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
-The data set is a filtered `.vcf` with 892 Pacific herring low coverage genomes:
+The starting data set is a filtered `.vcf` with 892 Pacific herring low coverage genomes:
 
 minimum depth = 600  
 maximum depth = 2000  
 minimum base quality = 20  
 minimum mapping quality = 30  
 genotyping rate > 50% for each population (grouped by sampling location and year)
+NO MAF threshold
 
 `ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf`
 
@@ -98,8 +99,7 @@ def sbatch_header_loop(job,mem,tasks,hours,infile):
 
 ```
 
-
-# LD prune master `.vcf`
+# Creating 2d SFS for moments pipeline
 
 from fantastic beasts, Mikhail Matz 2017:
 there is a concern that high variation in coverage across samples and populations might
@@ -108,6 +108,8 @@ coverage outliers and down-sample reads from highest-coverage outliers (J. Ross-
 
 Solution: before generating SFS, use higher minDP threshold and higher genotyping rate.
 Then LD prune and create 2dSFS for populations.
+
+## Find SNPs in LD
 
 LD r2 < 0.01 within sliding windows (500 SNP window, 50 SNP step)
 
@@ -131,50 +133,325 @@ plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_min
 # make tab delimited
 #sed 's/:/\t/g' /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in > /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in.tab 
 
-module load bcftools 
-bcftools view -R /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in.tab /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz -Oz --threads 8 > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz 
-bcftools query -f '%CHROM %POS %DP %NS\n' /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.DP.NS.info 
-#bcftools filter -Oz -i 'INFO/DP>1300' /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz -o /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP1300_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz 
-
-
-
 #command to run: sbatch script_LD.sh
 ```
 
-## Generate sites script
-```{python,results='hide', eval = FALSE}
-job_name = 'LD'
-vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5'
+## LD prune and output depth and number of samples genotyped
 
-sbatch_header(job_name,'30','8','24')
-script = 'script_' + job_name + '.sh'
-o = io.open(script,'a+', newline='\n')
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=LD_prune
+#SBATCH --mem=8G 
+#SBATCH --ntasks=8 
+#SBATCH -e LD_prune_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load bcftools 
+bcftools view -R /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_indep_pairwise_500_50_0.1.prune.in.tab /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz -Oz --threads 8 > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz 
+bcftools query -f '%CHROM %POS %DP %NS\n' /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz > /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.DP.NS.info 
 
 
-o.write('module load plink \n')
-o.write('plink --file /home/jamcgirr/ph/data/vcfs/'+vcf_name+' --indep-pairwise 500 50 0.1 --r2 --out /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_500_50_0.1 --threads 8 \n') 
-o.write('#sed \'s/:/\t/g\' /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_500_50_0.1.prune.in > /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_500_50_0.1.prune.in.tab \n')
-
-#run sbatch submission 
-o.write('\n\n#command to run: sbatch '+script)
-o.close()
-
+#run: sbatch script_LD_prune.sh
 ```
 
 
 ## Plot distribution of depth and number of samples genotyped
 
+Determine appropriate DP and NS thresholds (more strict)
+
+How about 80% genotyping rate and DP > 50th %ile
+
+filters down to 25982 SNPs
+
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.DP.NS.info", header = FALSE, stringsAsFactors = FALSE)
+info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.DP.NS.info", header = FALSE, stringsAsFactors = FALSE)
 head(info)
-hist(info$V3, ylab = "DP", main = "")
-hist(info$V4, ylab = "NS", main = "")
 
-nrow(info[info$V3 > 1400,])
-nrow(info[info$V3 > 1600 & info$V4 > 700,])
+quantile(info$V3,0.5)
+892*.7
+print("70% genotyping rate and DP > 50th %ile")
+nrow(info[info$V3 > 1600 & info$V4 > 624,])
+#print("80% genotyping rate and DP > 50th %ile")
+#nrow(info[info$V3 > 1600 & info$V4 > 713,])
+# 80% genotyping rate and DP > 1340 (1.5*892 ~1.5x coverage)
+#nrow(info[info$V3 > 1340 & info$V4 > 713,])
+
+
+hist(info$V3, xlab = "DP", main = "")
+abline(v = 1600, col = red)
+hist(info$V4, xlab = "NS", main = "")
+abline(v = 713, col = red)
 
 
 ```
 
+## Filter by DP and NS
 
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=filter_vcf_for_moments
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e filter_vcf_for_moments_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load bcftools 
+bcftools filter -Oz -i 'INFO/DP>1600 && INFO/NS>713' /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.vcf.gz -o /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP1600_maxDP2000_minQ20_minMQ30_NS0.8_ld0.1.vcf.gz 
+bcftools index /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP1600_maxDP2000_minQ20_minMQ30_NS0.8_ld0.1.vcf.gz 
+
+
+#command to run: sbatch script_filter_vcf_for_moments.sh
+
+```
+
+## 1D SFS
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=BC17_subset_pops_pruned
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_subset_pops_pruned_%A_%a.err 
+#SBATCH --time=24:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load samtools 
+module load bcftools 
+
+bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/BC17_plates_1_through_5_rm.txt -Oz /home/jamcgirr/ph/data/moments/vcfs/ph_filtered_snps_minDP1600_maxDP2000_minQ20_minMQ30_NS0.8_ld0.1.vcf.gz --threads 4 > /home/jamcgirr/ph/data/moments/ld_prune/vcfs/BC17_ph_filtered_snps_minDP1600_maxDP2000_minQ20_minMQ30_NS0.8_ld0.1.vcf.gz 
+/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -doSaf 1 -vcf-pl /home/jamcgirr/ph/data/moments/ld_prune/vcfs/BC17_ph_filtered_snps_minDP1600_maxDP2000_minQ20_minMQ30_NS0.8_ld0.1.vcf.gz -out /home/jamcgirr/ph/data/moments/ld_prune/saf/BC17 -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa 
+
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/moments/ld_prune/saf/BC17.saf.idx -fold 1 > /home/jamcgirr/ph/data/moments/ld_prune/sfs/BC17_folded.sfs 
+/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS /home/jamcgirr/ph/data/moments/ld_prune/saf/BC17.saf.idx > /home/jamcgirr/ph/data/moments/ld_prune/sfs/BC17_unfolded.sfs 
+
+
+#command to run: sbatch script_BC17_subset_pops_pruned.sh
+```
+
+### Generate SFS scripts
+```{python,results='hide', eval = FALSE}
+job_name = '_subset_pops_pruned'
+
+saf_dir = '/home/jamcgirr/ph/data/moments/ld_prune/saf/'
+sfs_dir = '/home/jamcgirr/ph/data/moments/ld_prune/sfs/'
+vcf_name = 'ph_filtered_snps_minDP1600_maxDP2000_minQ20_minMQ30_NS0.8_ld0.1'
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','24', infile)
+    o = io.open(script,'a+', newline='\n')
+        
+    o.write('module load samtools \n')
+    o.write('module load bcftools \n\n')
+
+    # subset master vcf 
+    o.write('bcftools view -S /home/jamcgirr/ph/scripts/angsd/SFS/SFS_by_pop/'+infile+'_plates_1_through_5_rm.txt -Oz /home/jamcgirr/ph/data/moments/vcfs/'+vcf_name+'.vcf.gz --threads 4 > /home/jamcgirr/ph/data/moments/ld_prune/vcfs/'+infile+'_'+vcf_name+'.vcf.gz \n')
+    # make saf from vcf
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/angsd -doSaf 1 -vcf-pl /home/jamcgirr/ph/data/moments/ld_prune/vcfs/'+infile+'_'+vcf_name+'.vcf.gz -out /home/jamcgirr/ph/data/moments/ld_prune/saf/'+infile+' -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa \n\n')
+    
+    # make folded sfs
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS '+saf_dir+infile+'.saf.idx -fold 1 > '+sfs_dir+infile+'_folded.sfs \n')
+    # make unfolded sfs
+    o.write('/home/jamcgirr/apps/angsd_sep_20/angsd/misc/realSFS '+saf_dir+infile+'.saf.idx > '+sfs_dir+infile+'_unfolded.sfs \n')
+
+    #run sbatch submission 
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+
+
+```
+
+## Plot SFS
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+# using SFS from angsd -dosaf -bam
+
+pop_names <- c("BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17")
+
+pop_name <- "PWS07"
+
+#for (pop_name in pop_names){
+sfs <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/sfs/1D/",pop_name,"_folded.sfs",sep = ""), header = FALSE, stringsAsFactors = FALSE)
+sfs <- as.vector(colSums(sfs))
+#sfs
+barplot(sfs[-c(1,length(sfs))]) #plot variable sites 
+
+```
+
+## 2D SFS
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=BC17_CA17_dadi_2d_sfs
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_CA17_dadi_2d_sfs_%A_%a.err 
+#SBATCH --time=1:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load perl 
+/home/jamcgirr/apps/angsd/misc/realSFS dadi /home/jamcgirr/ph/data/moments/ld_prune/saf/BC17.saf.idx /home/jamcgirr/ph/data/moments/ld_prune/saf/CA17.saf.idx -sfs /home/jamcgirr/ph/data/moments/ld_prune/sfs/BC17_folded.sfs -sfs /home/jamcgirr/ph/data/moments/ld_prune/sfs/CA17_folded.sfs -P 4 -ref /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/BC17_CA17_dadi.sfs 
+/home/jamcgirr/apps/moments/AFS-analysis-with-moments/multimodel_inference/realsfs2dadi.pl /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/BC17_CA17_dadi.sfs 64 70 > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/BC17_CA17_dadi_snp.data 
+rm /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/BC17_CA17_dadi.sfs 
+
+/home/jamcgirr/apps/angsd/misc/realSFS dadi /home/jamcgirr/ph/data/moments/ld_prune/saf/BC17.saf.idx /home/jamcgirr/ph/data/moments/ld_prune/saf/CA17.saf.idx -sfs /home/jamcgirr/ph/data/moments/ld_prune/sfs/BC17_unfolded.sfs -sfs /home/jamcgirr/ph/data/moments/ld_prune/sfs/CA17_unfolded.sfs -P 4 -ref /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/BC17_CA17_dadi.sfs 
+/home/jamcgirr/apps/moments/AFS-analysis-with-moments/multimodel_inference/realsfs2dadi.pl /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/BC17_CA17_dadi.sfs 64 70 > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/BC17_CA17_dadi_snp.data 
+rm /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/BC17_CA17_dadi.sfs 
+
+```
+
+### Generate SFS scripts
+```{python,results='hide', eval = FALSE}
+job_name = '_dadi_2d_sfs'
+
+realSFS = '/home/jamcgirr/apps/angsd/misc/realSFS'
+saf_dir = '/home/jamcgirr/ph/data/moments/ld_prune/saf/'
+sfs_dir = '/home/jamcgirr/ph/data/moments/ld_prune/sfs/'
+
+pop_n = {"BC17":"64","CA17":"70","PWS07":"46","PWS17":"56","PWS91":"58","PWS96":"72","SS06":"41","SS17":"64","SS96":"78","TB06":"52","TB17":"72","TB91":"74","TB96":"73","WA17":"72"}
+infiles = ["BC17_CA17","BC17_WA17","PWS07_PWS17","PWS07_SS06","PWS17_BC17","PWS17_CA17","PWS17_SS17","PWS17_WA17","PWS91_PWS07","PWS91_PWS17","PWS91_PWS96","PWS96_PWS07","PWS96_PWS17","PWS96_SS96","SS06_SS17","SS17_BC17","SS17_CA17","SS17_WA17","SS96_SS06","SS96_SS17","TB06_PWS07","TB06_SS06","TB06_TB17","TB17_BC17","TB17_CA17","TB17_PWS17","TB17_SS17","TB17_WA17","TB91_TB06","TB91_TB17","TB91_TB96","TB96_PWS96","TB96_SS96","TB96_TB06","TB96_TB17","WA17_CA17"]
+
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','1', infile)
+    o = io.open(script,'a+', newline='\n')
+    
+    pops = ''.join(infile).split("_")
+    
+    o.write('module load perl \n')
+    
+    # folded
+    o.write(realSFS+' dadi '+saf_dir+pops[0]+'.saf.idx '+saf_dir+pops[1]+'.saf.idx -sfs '+sfs_dir+pops[0]+'_folded.sfs -sfs '+sfs_dir+pops[1]+'_folded.sfs -P 4 -ref /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/'+pops[0]+'_'+pops[1]+'_dadi.sfs \n')
+    o.write('/home/jamcgirr/apps/moments/AFS-analysis-with-moments/multimodel_inference/realsfs2dadi.pl /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/'+pops[0]+'_'+pops[1]+'_dadi.sfs '+pop_n[pops[0]]+' '+pop_n[pops[1]]+' > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/'+pops[0]+'_'+pops[1]+'_dadi_snp.data \n')
+    o.write('rm /home/jamcgirr/ph/data/moments/2d_sfs_dadi/folded/'+pops[0]+'_'+pops[1]+'_dadi.sfs \n\n')
+
+    # unfolded
+    o.write(realSFS+' dadi '+saf_dir+pops[0]+'.saf.idx '+saf_dir+pops[1]+'.saf.idx -sfs '+sfs_dir+pops[0]+'_unfolded.sfs -sfs '+sfs_dir+pops[1]+'_unfolded.sfs -P 4 -ref /home/jamcgirr/ph/data/c_harengus/c.harengus.fa -anc /home/jamcgirr/ph/data/c_harengus/c.harengus.fa > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/'+pops[0]+'_'+pops[1]+'_dadi.sfs \n')
+    o.write('/home/jamcgirr/apps/moments/AFS-analysis-with-moments/multimodel_inference/realsfs2dadi.pl /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/'+pops[0]+'_'+pops[1]+'_dadi.sfs '+pop_n[pops[0]]+' '+pop_n[pops[1]]+' > /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/'+pops[0]+'_'+pops[1]+'_dadi_snp.data \n')
+    o.write('rm /home/jamcgirr/ph/data/moments/2d_sfs_dadi/unfolded/'+pops[0]+'_'+pops[1]+'_dadi.sfs \n\n')
+
+
+    #run sbatch submission 
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+
+
+```
+
+## Plot 2D SFS
+```{python,results='hide', eval = FALSE}
+
+import moments
+import matplotlib
+pops = ["SS17","TB17"]
+dd = moments.Misc.make_data_dict('C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/'+pops[0] + '_' + pops[1]+'_dadi_snp.data')
+fs = moments.Spectrum.from_data_dict(dd,pop_ids=[pops[0], pops[1]],projections=[40 , 40],polarized = True)
+S = fs.S()
+Fst = fs.Fst()
+print(S)
+print(Fst)
+
+moments.Plotting.plot_single_2d_sfs(fs, vmin =1)
+matplotlib.pyplot.savefig("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/" + pops[0] + "_" + pops[1] + "_2d_sfs.png") 
+matplotlib.pyplot.close()
+
+```
+
+# Testing simple demographic models with moments pipeline
+
+## one population split into two pops with symmetrical migration
+```{r}
+
+# http://evomics.org/wp-content/uploads/2016/01/dadi.pdf
+# In dadi, all parameters are scaled by the effective size of the ancestral population. To find
+# that effective size, we use the relationship θ = 4NeµL, where µ is the per-base mutation
+# rate, and L is length of sequence from which the SNPs came. So Ne = θ/4µL. 
+
+model_name <- "sym_mig_2_pop"
+pops <- "PWS17_SS17"
+pops <- "PWS17_TB17"
+
+
+for (i in c(1:5)){
+#params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V4_Number_",i,".sym_mig.optimized.txt", sep = ""))
+params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
+params <- params[order(params$AIC),]
+head(params)
+params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
+
+print(boxplot(params$log.likelihood~params$round))
+opt_params <- strsplit(params[1,8], ",")[[1]]
+print("optimized parameter set for empirical data:")
+print(opt_params)
+print("theta")
+print(params$theta[1])
+
+}
+
+
+i <- 2
+  
+#params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V4_Number_",best,".sym_mig.optimized.txt", sep = ""))
+params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
+params <- params[order(params$AIC),]
+params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
+#print(boxplot(params$log.likelihood~params$round))
+opt_params <- strsplit(params[1,8], ",")[[1]]
+
+   # Split into two populations, with symmetric migration.
+   # nu1: Size of population 1 after split.
+   # nu2: Size of population 2 after split.
+   # m: Migration rate between populations (2*Na*m)
+   # T: Time in the past of split (in units of 2*Na generations) 
+   
+theta <- as.numeric(params$theta[1])
+nu1 <- as.numeric(opt_params[1])
+nu2 <- as.numeric(opt_params[2])
+m <- as.numeric(opt_params[3])
+t <- as.numeric(opt_params[4])
+
+# generation time
+g <- 6
+# atlantic herring mutation rate
+mu <- 2.0e-9
+
+
+#https://groups.google.com/g/dadi-user/c/DYrpTHCcC_I/m/nl3f2eGSAQAJ
+# estimate of L needs to account for filtering
+# L = (genome size) * (filtered SNPs)/(total SNPs)
+L <- 7.26e8  * (200000/8732577)
+L <- 1000000
+#https://groups.google.com/g/dadi-user/c/5HtpVOCO2nc/m/yYbh48MLBAAJ
+# effective size of current population
+0.003/(4*mu)
+
+# effective size of ancestral population
+Nref <- theta / (4* mu* L)
+Nref
+
+# Time since split
+t*2*Nref*4
+
+```
