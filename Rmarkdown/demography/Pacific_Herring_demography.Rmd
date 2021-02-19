@@ -392,11 +392,13 @@ matplotlib.pyplot.close()
 model_name <- "sym_mig_2_pop"
 pops <- "PWS17_SS17"
 pops <- "PWS17_TB17"
+pops <- "SS17_TB17"
 
 
 for (i in c(1:5)){
 #params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V4_Number_",i,".sym_mig.optimized.txt", sep = ""))
-params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
+
+params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/",pops,"/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
 params <- params[order(params$AIC),]
 head(params)
 params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
@@ -410,8 +412,8 @@ print(params$theta[1])
 
 }
 
-
-i <- 2
+# best run
+i <- 5
   
 #params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V4_Number_",best,".sym_mig.optimized.txt", sep = ""))
 params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
@@ -441,7 +443,9 @@ mu <- 2.0e-9
 #https://groups.google.com/g/dadi-user/c/DYrpTHCcC_I/m/nl3f2eGSAQAJ
 # estimate of L needs to account for filtering
 # L = (genome size) * (filtered SNPs)/(total SNPs)
-L <- 7.26e8  * (200000/8732577)
+#L <- 7.26e8  * (200000/8732577)
+
+#using 1MB of chr1
 L <- 1000000
 #https://groups.google.com/g/dadi-user/c/5HtpVOCO2nc/m/yYbh48MLBAAJ
 # effective size of current population
