@@ -1,5 +1,5 @@
 ---
-title: "Herring Population Collapse and Lack of Recovery"
+title: "Updates 2/24"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
@@ -74,7 +74,13 @@ We expect that estimates of short-term effective population size using temporal 
 2.	Continued decline in Ne in PWS through 2017 as selection driven by disease outbreaks further reduced genetic diversity.
 3.	A larger decline in Ne in PWS than TB and SS between 1996-2006 and 2006-2017.
 
+### Evidence
+
+![](C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/progress_updates/short_term_ne.PNG)
+
 Alternatively, we expect that estimates of long-term effective population size using Ө = 4Neµ will not be affected by recent changes in population size in any population.
+
+![](C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/ne.png)
 
 ## 2. The PWS population experienced a shift between two selection pressures over time. 
 
@@ -85,12 +91,31 @@ We expect that measures of temporal covariance:
 1.	Will be negative in PWS, reflecting a change in selection pressure between 1991-1996 versus 1996-2007 and 2007-2017.
 2.	Will be near zero or be positive in SS and TB where selection regimes have remained more stable. 
 
-We can also identify specific genomic regions responding to shifts in selection pressures by identifying alleles showing large frequency changes over time. The summary statistic ∆z is the difference in arcsine square-root transformed minor allele frequencies between sampling periods. 
+### Evidence: genome-wide
 
-We expect:
+Temporal covariance:
+PWS: -0.0033
+SS: -0.0069
+TB: 0.0029
+
+### Evidence: genomic regions
+
+We can also identify specific genomic regions responding to shifts in selection pressures by identifying alleles showing large frequency changes over time. Using two complementary approaches:
+
+1. Look at the relationship between temporal covariance and LD binned into windows and determine candidate outlier windows under selection.
+
+2. Look at the summary statistic ∆z binned into windows (the difference in arcsine square-root transformed minor allele frequencies between sampling periods).
+
+3. Look at Fst within populations and between sampling periods, binned into windows.
+
+For the ∆z approach we expect:
 
 1.  Alleles showing large ∆z between 1991 and 1996 will be more likely to show ∆z in the opposite direction between 1996 and 2006 in PWS compared to TB, reflecting the unique change in selection pressure in PWS.
 2.  Alleles showing large ∆z in the same direction between all sampling periods in all populations are influenced by shared selection pressures. 
+
+Similar expectations for Fst 
+
+SWITCH TO AF SHIFTS NOTEBOOK
 
  
 

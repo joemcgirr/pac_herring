@@ -70,7 +70,11 @@ ne <- thetaW / 2.0e-9 / nSites / 4 # effective population size
 ne_s <- c(ne_s, ne)
 }
 
-barplot(ne_s, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red,red,red,blu,blu,blu,blu,yel,yel,yel,grb,lir,org),cex.names=0.7)
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/ne.png", height = 5, width = 8, units = 'in', res = 600)
+
+barplot(ne_s, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red,red,red,blu,blu,blu,blu,yel,yel,yel,grb,lir,org),cex.names=0.6)
+
+#dev.off()
 
 ```
 

@@ -7,7 +7,7 @@ output:
     code_folding: hide
     collapsed: no
     df_print: paged
-    number_sections: yes
+    number_sections: no
     theme: paper
     toc: yes
     toc_depth: 5
@@ -18,6 +18,11 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
+
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -411,115 +416,7 @@ venn(list(PWS_down=pws_decreased_freq$windex,
 # Identify windows where allele frequencies showed LARGE shifts in the same direction:
 
 Are there any windows that show:
-  - ∆z > 90th percentile across all sampling periods
-  - ∆z < 10th percentile across all sampling periods
 
-
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
-
-
-pop <- "PWS"
-
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
-freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
-colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
-# identify windows where allele frequencies increased between each sampling period
-pws_increased_freq <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
-                           freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
-                           freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
-
-# identify windows where allele frequencies decreased between each sampling period
-pws_decreased_freq <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
-                           freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
-                           freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
-
-#print(paste(pop,"increased"))
-#print(nrow(top_increased))# / nrow(freqs_win))
-#print(paste(pop,"decreased"))
-#print(nrow(top_decreased))# / nrow(freqs_win))
-
-#hist(c(top_increased$zt01_mean,
-#       top_increased$zt12_mean,
-#       top_increased$zt23_mean,
-#       top_decreased$zt01_mean,
-#       top_decreased$zt12_mean,
-#       top_decreased$zt23_mean), xlab = expression(paste(Delta, "z")),
-#       main = pop, xlim = c(-0.25, 0.3))
-
-
-pop <- "TB"
-
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
-freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
-colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
-# identify windows where allele frequencies increased between each sampling period
-tb_increased_freq <- freqs_win[freqs_win$zt01_mean >= quantile(freqs_win$zt01_mean, .9)[[1]] &
-                           freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
-                           freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
-
-# identify windows where allele frequencies decreased between each sampling period
-tb_decreased_freq <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .1)[[1]] &
-                           freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
-                           freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
-
-#print(paste(pop,"increased"))
-#print(nrow(top_increased))# / nrow(freqs_win))
-#print(paste(pop,"decreased"))
-#print(nrow(top_decreased))# / nrow(freqs_win))
-
-#hist(c(top_increased$zt01_mean,
-#       top_increased$zt12_mean,
-#       top_increased$zt23_mean,
-#       top_decreased$zt01_mean,
-#       top_decreased$zt12_mean,
-#       top_decreased$zt23_mean), xlab = expression(paste(Delta, "z")),
-#       main = pop, xlim = c(-0.25, 0.3))
-
-
-pop <- "SS"
-
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
-freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
-colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
-# identify windows where allele frequencies increased between each sampling period
-ss_increased_freq <- freqs_win[freqs_win$zt12_mean >= quantile(freqs_win$zt12_mean, .9)[[1]] &
-                               freqs_win$zt23_mean >= quantile(freqs_win$zt23_mean, .9)[[1]],]
-
-# identify windows where allele frequencies decreased between each sampling period
-ss_decreased_freq <- freqs_win[freqs_win$zt12_mean <= quantile(freqs_win$zt12_mean, .1)[[1]] &
-                               freqs_win$zt23_mean <= quantile(freqs_win$zt23_mean, .1)[[1]],]
-
-
-
-pws_increased_freq$windex <- paste(pws_increased_freq$seqnames, pws_increased_freq$win_mid, sep = ":")
-pws_decreased_freq$windex <- paste(pws_decreased_freq$seqnames, pws_decreased_freq$win_mid, sep = ":")
-
-tb_increased_freq$windex <- paste(tb_increased_freq$seqnames, tb_increased_freq$win_mid, sep = ":")
-tb_decreased_freq$windex <- paste(tb_decreased_freq$seqnames, tb_decreased_freq$win_mid, sep = ":")
-
-ss_increased_freq$windex <- paste(ss_increased_freq$seqnames, ss_increased_freq$win_mid, sep = ":")
-ss_decreased_freq$windex <- paste(ss_decreased_freq$seqnames, ss_decreased_freq$win_mid, sep = ":")
-
-
-venn(list(PWS_up=pws_increased_freq$windex,
-          TB_up=tb_increased_freq$windex,
-          SS_up=ss_increased_freq$windex), 
-     ilabels = TRUE,opacity = 0.5,box = FALSE,
-     zcolor = c(red,blu,yel), ilcs = 1)
-
-venn(list(PWS_down=pws_decreased_freq$windex,
-          TB_down=tb_decreased_freq$windex,
-          SS_down=ss_decreased_freq$windex), 
-     ilabels = TRUE,opacity = 0.5,box = FALSE,
-     zcolor = c(red,blu,yel), ilcs = 1)
-
-
-
-```
-
-# Identify windows where allele frequencies showed shifts in opposing directions:
-
-Are there any windows that show:
   - ∆z > 90th percentile across all sampling periods
   - ∆z < 10th percentile across all sampling periods
 
@@ -709,7 +606,7 @@ genes_overlap <- join_overlap_intersect(tops, genes) %>% as.data.frame()
 ```
 
 
-# Identify windows where allele frequencies showed large shifts after collapse and reversed over time:
+# Identify windows where allele frequencies showed shifts after collapse and reversed over time:
 
   - increased between 91 and 96, decreased between 96 and 07, and continued to decrease between 07 and 17
   - decreased between 91 and 96, increased between 96 and 07, and continued to increase between 07 and 17
@@ -878,6 +775,63 @@ venn(list(PWS_dn_up_up=pws_dn_up_up$windex,
 
 ```
 
+# Fst windows
+Which loci are consistently differentiated between sampling periods
+
+Find windows that show high Fst in 1991 v 1996, 1996 v 2007, and 2007 - 2017 comparisons
+```{r, show = FALSE,message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/", full.names=T)
+#fsts <- fsts[1]
+
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt", header = TRUE, stringsAsFactors = FALSE)
+fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt", header = TRUE, stringsAsFactors = FALSE)
+names(fst2) <- c("region","chr","midPos","Nsites","Fst02","Fst03","Fst23","PBS0","PBS2","PBS3")
+
+fst$Fst03 <- fst2$Fst03
+fst$Fst23 <- fst2$Fst23
+
+fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
+fst$chr_num <- factor(fst$chr, levels = c(1:26))
+
+high_fst <- fst[fst$Fst01 >= quantile(fst$Fst01, .90)[[1]] &
+                fst$Fst12 >= quantile(fst$Fst12, .90)[[1]] &
+                fst$Fst23 >= quantile(fst$Fst23, .90)[[1]],]
+high_fst$windex <- paste(high_fst$chr,high_fst$midPos,sep = ":")
+pws <- high_fst
+head(high_fst)
+nrow(high_fst)
+
+
+
+fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt", header = TRUE, stringsAsFactors = FALSE)
+fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt", header = TRUE, stringsAsFactors = FALSE)
+names(fst2) <- c("region","chr","midPos","Nsites","Fst02","Fst03","Fst23","PBS0","PBS2","PBS3")
+
+fst$Fst03 <- fst2$Fst03
+fst$Fst23 <- fst2$Fst23
+
+fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
+fst$chr_num <- factor(fst$chr, levels = c(1:26))
+
+high_fst <- fst[fst$Fst01 >= quantile(fst$Fst01, .90)[[1]] &
+                fst$Fst12 >= quantile(fst$Fst12, .90)[[1]] &
+                fst$Fst23 >= quantile(fst$Fst23, .90)[[1]],]
+high_fst$windex <- paste(high_fst$chr,high_fst$midPos,sep = ":")
+tb <- high_fst
+
+head(high_fst)
+nrow(high_fst)
+
+
+
+venn(list(PWS=pws$windex,
+          TB=tb$windex), 
+     ilabels = TRUE,opacity = 0.5,box = FALSE,
+     zcolor = c(red,blu,yel), ilcs = 1)
+
+
+```
+
 
 # Fst matrix temporal samples (within population comparisons)
 
@@ -994,65 +948,6 @@ ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
  geom_text(aes(Var2, Var1, label = value), color = "black", size = 5)
 
 ```
-
-# Fst windows
-Which loci are consistently differentiated between sampling periods
-
-Find windows that show high Fst in 1991 v 1996, 1996 v 2007, and 2007 - 2017 comparisons
-```{r, show = FALSE,message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/", full.names=T)
-#fsts <- fsts[1]
-
-fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS96_PWS07.txt", header = TRUE, stringsAsFactors = FALSE)
-fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_PWS91_PWS07_PWS17.txt", header = TRUE, stringsAsFactors = FALSE)
-names(fst2) <- c("region","chr","midPos","Nsites","Fst02","Fst03","Fst23","PBS0","PBS2","PBS3")
-
-fst$Fst03 <- fst2$Fst03
-fst$Fst23 <- fst2$Fst23
-
-fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
-fst$chr_num <- factor(fst$chr, levels = c(1:26))
-
-high_fst <- fst[fst$Fst01 >= quantile(fst$Fst01, .90)[[1]] &
-                fst$Fst12 >= quantile(fst$Fst12, .90)[[1]] &
-                fst$Fst23 >= quantile(fst$Fst23, .90)[[1]],]
-high_fst$windex <- paste(high_fst$chr,high_fst$midPos,sep = ":")
-pws <- high_fst
-head(high_fst)
-nrow(high_fst)
-
-
-
-fst <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB06.txt", header = TRUE, stringsAsFactors = FALSE)
-fst2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/fst_pbs_50kb_win_10kb_step_folded_TB91_TB96_TB17.txt", header = TRUE, stringsAsFactors = FALSE)
-names(fst2) <- c("region","chr","midPos","Nsites","Fst02","Fst03","Fst23","PBS0","PBS2","PBS3")
-
-fst$Fst03 <- fst2$Fst03
-fst$Fst23 <- fst2$Fst23
-
-fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
-fst$chr_num <- factor(fst$chr, levels = c(1:26))
-
-high_fst <- fst[fst$Fst01 >= quantile(fst$Fst01, .90)[[1]] &
-                fst$Fst12 >= quantile(fst$Fst12, .90)[[1]] &
-                fst$Fst23 >= quantile(fst$Fst23, .90)[[1]],]
-high_fst$windex <- paste(high_fst$chr,high_fst$midPos,sep = ":")
-tb <- high_fst
-
-head(high_fst)
-nrow(high_fst)
-
-
-
-venn(list(PWS=pws$windex,
-          TB=tb$windex), 
-     ilabels = TRUE,opacity = 0.5,box = FALSE,
-     zcolor = c(red,blu,yel), ilcs = 1)
-
-
-```
-
-
 
 
 
