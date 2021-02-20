@@ -416,8 +416,20 @@ print(params$theta[1])
 
 # best run
 i <- 2
-  
-#params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/moments_pipeline/models/",model_name,"/",pops,"/V4_Number_",best,".sym_mig.optimized.txt", sep = ""))
+
+#parameter ranges
+params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/chr1_5mb/",pops,"/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
+params <- params[order(params$AIC),]
+params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
+#print(boxplot(params$log.likelihood~params$round))
+params <- params %>% separate(optimized_params.nu1..nu2..m..T., into = c("nu1","nu2","m","t"), sep = ",")
+boxplot(params$theta~params$round)
+boxplot(as.numeric(params$nu1)~params$round)
+boxplot(as.numeric(params$nu2)~params$round)
+boxplot(as.numeric(params$m)~params$round)
+boxplot(as.numeric(params$t)~params$round)
+
+# calcualte split time and pop size  
 params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/chr1_5mb/",pops,"/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
 params <- params[order(params$AIC),]
 params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
@@ -463,36 +475,23 @@ t*2*Nref*4
 
 
 
-#parameter ranges
 
 
-params <- read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/chr1_5mb/",pops,"/V5_Number_",i,".sym_mig.optimized.txt", sep = ""))
-params <- params[order(params$AIC),]
-params <- params %>% separate(Replicate, c("round","replicate"), remove = TRUE,sep = "_R")
-#print(boxplot(params$log.likelihood~params$round))
-params <- params %>% separate(optimized_params.nu1..nu2..m..T., into = c("nu1","nu2","m","t"), sep = ",")
-boxplot(params$theta~params$round)
-boxplot(as.numeric(params$nu1)~params$round)
-boxplot(as.numeric(params$nu2)~params$round)
-boxplot(as.numeric(params$m)~params$round)
-boxplot(as.numeric(params$t)~params$round)
-
-
-thetas <-c()
-nu1s   <-c()
-nu2s   <-c()
-ms     <-c()
-ts     <-c()
-for (param_row in c(1:nrow(params))){
-opt_params <- strsplit(params[1,8], ",")[[param_row]]
-
-theta <- c(thetas ,as.numeric(params$theta[param_row]))
-nu1   <- c(nu1s   ,as.numeric(opt_params[1]))
-nu2   <- c(nu2s   ,as.numeric(opt_params[2]))
-m     <- c(ms     ,as.numeric(opt_params[3]))
-t     <- c(ts     ,as.numeric(opt_params[4]))
-
-}
+# thetas <-c()
+# nu1s   <-c()
+# nu2s   <-c()
+# ms     <-c()
+# ts     <-c()
+# for (param_row in c(1:nrow(params))){
+# opt_params <- strsplit(params[1,8], ",")[[param_row]]
+# 
+# theta <- c(thetas ,as.numeric(params$theta[param_row]))
+# nu1   <- c(nu1s   ,as.numeric(opt_params[1]))
+# nu2   <- c(nu2s   ,as.numeric(opt_params[2]))
+# m     <- c(ms     ,as.numeric(opt_params[3]))
+# t     <- c(ts     ,as.numeric(opt_params[4]))
+# 
+# }
 
 
 
