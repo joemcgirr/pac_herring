@@ -24,7 +24,7 @@ pre, code {white-space:pre !important; overflow-x:auto}
 ```
 
 # Summary
-This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs across 892 low coverage genomes. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pacific_Hering_demography.Rmd)
+This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs across 892 low coverage genomes. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pacific_Herring_demography.Rmd)
 
 The `.vcf` was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
@@ -460,7 +460,7 @@ mu <- 2.0e-9
 # L = (genome size) * (filtered SNPs)/(total SNPs)
 #L <- 7.26e8  * (200000/8732577)
 
-#using 1MB of chr1
+#using 5MB of chr1
 L <- 5000000
 #https://groups.google.com/g/dadi-user/c/5HtpVOCO2nc/m/yYbh48MLBAAJ
 # effective size of current population

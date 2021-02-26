@@ -775,6 +775,112 @@ venn(list(PWS_dn_up_up=pws_dn_up_up$windex,
 
 ```
 
+# Permutation tests to determine significant outlier windows.
+
+Randomly sample individuals from t0 and t1 and measure change in allele frequencies in 50kb windows. Identify genome-wide mean of means across windows and quantiles across 1000 permutations.
+
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop <- "PWS"
+
+
+perm_t01 <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/perms/",pop,"91_",pop,"96_perms.txt", sep = ""), header = TRUE)
+perm_t12 <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/perms/",pop,"96_",pop,"07_perms.txt", sep = ""), header = TRUE)
+perm_t23 <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/perms/",pop,"07_",pop,"17_perms.txt", sep = ""), header = TRUE)
+
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
+
+c(min(freqs_win$zt01_mean),max(freqs_win$zt01_mean))
+c(mean(perm_t01$min),mean(perm_t01$max))
+
+# identify windows where allele frequencies increased between 91 and 96
+# and decreased between 96 and 07
+# and continued to decrease between 07 and 17
+pws_up_dn_dn <- freqs_win[freqs_win$zt01_mean >= quantile(perm_t01$q_90, .9)[[1]] &
+                          freqs_win$zt12_mean <= quantile(perm_t12$q_10, .1)[[1]] &
+                          freqs_win$zt23_mean <= quantile(perm_t23$q_10, .1)[[1]],]
+
+# identify windows where allele frequencies decreased between 91 and 96
+# and increased between 96 and 07
+# and continued to increase between 07 and 17
+pws_dn_up_up <- freqs_win[freqs_win$zt01_mean <= quantile(perm_t01$q_10, .1)[[1]] &
+                          freqs_win$zt12_mean >= quantile(perm_t12$q_90, .9)[[1]] &
+                          freqs_win$zt23_mean >= quantile(perm_t23$q_90, .9)[[1]],]
+
+#print(paste(pop,"up_dn_dn"))
+#up_dn_dn# / nrow(freqs_win)
+#print(paste(pop,"dn_up_up"))
+#dn_up_up# / nrow(freqs_win)
+#
+#print(hist(c(up_dn_dn$zt01_mean,
+#             up_dn_dn$zt12_mean,
+#             up_dn_dn$zt23_mean,
+#             dn_up_up$zt01_mean,
+#             dn_up_up$zt12_mean,
+#             dn_up_up$zt23_mean), xlab = expression(paste(Delta, "z")),
+#             main = pop))#, xlim = c(-0.25, 0.3)))
+
+pop <- "TB"
+
+perm_t01 <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/perms/",pop,"91_",pop,"96_perms.txt", sep = ""), header = TRUE)
+perm_t12 <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/perms/",pop,"96_",pop,"06_perms.txt", sep = ""), header = TRUE)
+perm_t23 <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/perms/",pop,"06_",pop,"17_perms.txt", sep = ""), header = TRUE)
+
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
+
+# identify windows where allele frequencies increased between 91 and 96
+# and decreased between 96 and 07
+# and continued to decrease between 07 and 17
+tb_up_dn_dn <- freqs_win[freqs_win$zt01_mean >= quantile(perm_t01$q_90, .9)[[1]] &
+                          freqs_win$zt12_mean <= quantile(perm_t12$q_10, .1)[[1]] &
+                          freqs_win$zt23_mean <= quantile(perm_t23$q_10, .1)[[1]],]
+
+# identify windows where allele frequencies decreased between 91 and 96
+# and increased between 96 and 07
+# and continued to increase between 07 and 17
+tb_dn_up_up <- freqs_win[freqs_win$zt01_mean <= quantile(perm_t01$q_10, .1)[[1]] &
+                          freqs_win$zt12_mean >= quantile(perm_t12$q_90, .9)[[1]] &
+                          freqs_win$zt23_mean >= quantile(perm_t23$q_90, .9)[[1]],]
+
+
+pws_up_dn_dn$windex <- paste(pws_up_dn_dn$seqnames, pws_up_dn_dn$win_mid, sep = ":")
+pws_dn_up_up$windex <- paste(pws_dn_up_up$seqnames, pws_dn_up_up$win_mid, sep = ":")
+
+tb_up_dn_dn$windex <- paste(tb_up_dn_dn$seqnames, tb_up_dn_dn$win_mid, sep = ":")
+tb_dn_up_up$windex <- paste(tb_dn_up_up$seqnames, tb_dn_up_up$win_mid, sep = ":")
+
+
+p<-ggplot(all_pops, aes(x=zt01_t)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "Population",values=c(red,yel,blu))+
+   ylab("density\n") + xlab(expression(paste("TB",Delta, "z 1991-1996")))+
+   theme_minimal()+
+  geom_vline(xintercept = quantile(perm_t01$q_10, .1), color = red)+
+  geom_vline(xintercept = quantile(perm_t01$q_90, .9), color = red)+
+  geom_vline(xintercept = quantile(freqs_win$zt01_mean, .1), color = blu)+
+  geom_vline(xintercept = quantile(freqs_win$zt01_mean, .9), color = blu)
+p
+
+venn(list(PWS_up_dn_dn=pws_up_dn_dn$windex,
+          TB_up_dn_dn=tb_up_dn_dn$windex), 
+     ilabels = TRUE,opacity = 0.5,box = FALSE,
+     zcolor = c(red,blu,yel), ilcs = 1)
+
+venn(list(PWS_dn_up_up=pws_dn_up_up$windex,
+          TB_dn_up_up=tb_dn_up_up$windex), 
+     ilabels = TRUE,opacity = 0.5,box = FALSE,
+     zcolor = c(red,blu,yel), ilcs = 1)
+
+
+```
+
 # Fst windows
 Which loci are consistently differentiated between sampling periods
 
@@ -821,8 +927,6 @@ tb <- high_fst
 
 head(high_fst)
 nrow(high_fst)
-
-
 
 venn(list(PWS=pws$windex,
           TB=tb$windex), 

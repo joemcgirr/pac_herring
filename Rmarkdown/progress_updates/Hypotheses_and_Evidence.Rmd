@@ -84,7 +84,7 @@ Alternatively, we expect that estimates of long-term effective population size u
 
 ## 2. The PWS population experienced a shift between two selection pressures over time. 
 
-In 1989 during the oil spill, selection favored alleles conferring reduced sensitivity to embryonic oil exposure. Between 1993 and 2017, selection favored alleles conferring disease resistance. It is possible that alleles reducing sensitivity to pollutants also compromise immune function. We can understand how this shift in selection pressures influenced population recovery by measuring temporal covariance in allele frequency change. 
+In 1989 during the oil spill, selection favored alleles conferring reduced sensitivity to embryonic oil exposure. Between 1993 and 2017, selection favored alleles conferring disease resistance. It is possible that alleles reducing sensitivity to pollutants also compromise immune function. We can measure temporal covariance in allele frequency change to understand if there was a shift in selection pressure over time.
 
 We expect that measures of temporal covariance:
 
@@ -100,7 +100,9 @@ TB: 0.0029
 
 ### Evidence: genomic regions
 
-We can also identify specific genomic regions responding to shifts in selection pressures by identifying alleles showing large frequency changes over time. Using two complementary approaches:
+We can also identify specific genomic regions responding to shifts in selection pressures by identifying alleles showing large frequency changes over time. 
+
+Using two complementary approaches:
 
 1. Look at the relationship between temporal covariance and LD binned into windows and determine candidate outlier windows under selection.
 
