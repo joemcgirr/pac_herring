@@ -1,5 +1,5 @@
 ---
-title: "Fst_Dxy_TajimaD_Pi"
+title: "Pacific herring population genetic statistics"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
