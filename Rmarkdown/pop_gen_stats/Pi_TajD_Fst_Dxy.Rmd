@@ -26,7 +26,9 @@ pre, code {white-space:pre !important; overflow-x:auto}
 
 # Summary
 
-This notebook generates scripts to calculate genome-wide summary statistics from a `.vcf` with ANGSD and visualize results. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pi_TajD_Fst_Dxy.Rmd)
+This notebook generates scripts to calculate genome-wide summary statistics from a `.vcf` with ANGSD and visualize results. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pi_TajD_Fst_Dxy.Rmd).
+
+This notebook automates the tedious process of writing bash scripts for each job run on the computing cluster. Running this notebook will generate bash scripts using python and the R package reticulate. Bash scripts were made to run on the Farm cluster which uses SLURM scheduling. Each bash script has a SLURM header.
 
 The vcf was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
@@ -455,7 +457,7 @@ fst_vec <- c(0,tbxpw,tbxss,tbxbc,tbxwa,tbxca,
 fst_mat = matrix(fst_vec, nrow = 6, ncol = 6)
 colnames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
 rownames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
-print(fst_mat)
+#print(fst_mat)
 
   # Get upper triangle of the correlation matrix
   get_upper_tri <- function(cormat){
@@ -652,7 +654,7 @@ fst_vec <- c(0,tbxpw,tbxss,tbxbc,tbxwa,tbxca,
 fst_mat = matrix(fst_vec, nrow = 6, ncol = 6)
 colnames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
 rownames(fst_mat) <- c("TB17","PWS17","SS17","BC17","WA17","CA17")
-print(fst_mat)
+#print(fst_mat)
 
   # Get upper triangle of the correlation matrix
   get_upper_tri <- function(cormat){
