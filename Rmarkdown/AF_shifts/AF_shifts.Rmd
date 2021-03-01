@@ -170,38 +170,54 @@ head(freqs)
 nrow(freqs)
 #write.table(freqs, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/persite/TB_shifts_persite.txt")
 
-
+window_size <- 1000000
+step_size <- 100000
 freqs_win <- winScan(x = freqs, 
                    groups = "chr", 
                    position = "pos", 
                    values = c("zt01","zt02","zt03","zt12","zt13","zt23"), 
-                   win_size = 50000,
-                   win_step = 10000,
+                   win_size = window_size,
+                   win_step = step_size,
                    funs = c("mean"))
 freqs_win <- na.omit(freqs_win)
 freqs_win <- freqs_win %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 
-#write.table(freqs_win, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_50kb_win_10kb_step.txt")
+#write.table(freqs_win, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_1mb_win_100kb_step.txt")
 
-```
+# Sitka Sound
+t1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t1_AF"))
+t2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_SS06_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t2_AF"))
+t3 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_SS17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t3_AF"))
 
-# Example of genome-wide allele frequency shifts for PWS 1991 --> 1996
+freqs <- data.frame(chr = t1$chr,
+                    pos = t1$pos,
+                    t1_AF = t1$t1_AF,
+                    t2_AF = t2$t2_AF,
+                    t3_AF = t3$t3_AF)
 
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+freqs$t1_transformed_freq <- asin(sqrt(freqs$t1_AF))
+freqs$t2_transformed_freq <- asin(sqrt(freqs$t2_AF))
+freqs$t3_transformed_freq <- asin(sqrt(freqs$t3_AF))
 
-pop <- "PWS"
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs$zt12 <- freqs$t2_transformed_freq - freqs$t1_transformed_freq
+freqs$zt13 <- freqs$t3_transformed_freq - freqs$t1_transformed_freq
+freqs$zt23 <- freqs$t3_transformed_freq - freqs$t2_transformed_freq
+
+window_size <- 1000000
+step_size <- 100000
+freqs_win <- winScan(x = freqs, 
+                   groups = "chr", 
+                   position = "pos", 
+                   values = c("zt12","zt13","zt23"), 
+                   win_size = window_size,
+                   win_step = step_size,
+                   funs = c("mean"))
+freqs_win <- na.omit(freqs_win)
+freqs_win <- freqs_win %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 
-p <- ggplot(freqs_win, aes(x = win_mid, y = zt01_mean)) + 
-     geom_point(size = 1, color = gry,alpha = 0.7, shape = 1)+
-     theme_minimal()+
-     theme(axis.text.x=element_blank())+
-     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
-     #geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-     facet_wrap(~chr_num, ncol = 9)
-p
+#write.table(freqs_win, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_1mb_win_100kb_step.txt")
 
 ```
 
@@ -216,9 +232,13 @@ Shows the distribution of ∆z for each population from
 Does ∆z center around zero? (expected under drift)
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
-freqs_win_p <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_50kb_win_10kb_step.txt")
-freqs_win_t <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_50kb_win_10kb_step.txt")
-freqs_win_s <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_50kb_win_10kb_step.txt")
+
+win <- "1mb"
+step <- "100kb"
+
+freqs_win_p <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_",win,"_win_",step,"_step.txt",sep = ""))
+freqs_win_t <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_",win,"_win_",step,"_step.txt",sep = ""))
+freqs_win_s <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_",win,"_win_",step,"_step.txt",sep = ""))
 
 all_pops <- data.frame(chr = freqs_win_p$chr,
                        win_mid = freqs_win_p$win_mid,
@@ -282,6 +302,326 @@ p
 
 ```
 
+# Genome-wide allele frequency shifts
+
+## Within population all chromosomes
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+plot_af_chromosomes <- function(pop,years,win,step){
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = years)) + 
+     geom_point(size = 1, color = gry,alpha = 0.7, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
+     facet_wrap(~chr_num, ncol = 9)+
+     ggtitle(paste(pop,years, sep = " "))
+print(p)
+}
+
+
+plot_af_chromosomes_within <- function(pop,win,step){
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = "zt01_mean")) + 
+  theme_minimal()+
+  theme(axis.text.x=element_blank())+
+  ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+  geom_smooth(aes_string(x = "win_mid", y = "zt01_mean", color = "grb"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt12_mean", color = "lir"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt23_mean", color = "org"),method = "loess", se = FALSE, span = 1/10)+
+  facet_wrap(~chr_num, ncol = 9)+
+  scale_color_manual(values=c(lir,grb,org),name = "contrast",
+                     labels = c("1991-1996", "1996-2007", "2007-2017"))+
+  ylim(-0.05, 0.05)+theme(legend.position = c(0.95, 0.2))+
+  ggtitle(pop)
+print(p)
+
+}
+
+
+# Within Population
+
+pop <- "PWS"
+plot_af_chromosomes(pop,"zt01_mean",win,step)
+#plot_af_chromosomes(pop,"zt12_mean",win,step)
+#plot_af_chromosomes(pop,"zt23_mean",win,step)
+plot_af_chromosomes_within(pop,win,step)
+
+pop <- "TB"
+plot_af_chromosomes(pop,"zt01_mean",win,step)
+#plot_af_chromosomes(pop,"zt12_mean",win,step)
+#plot_af_chromosomes(pop,"zt23_mean",win,step)
+plot_af_chromosomes_within(pop,win,step)
+
+
+pop <- "SS"
+#plot_af_chromosomes(pop,"zt12_mean",win,step)
+#plot_af_chromosomes(pop,"zt23_mean",win,step)
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = "zt12_mean")) + 
+  theme_minimal()+
+  theme(axis.text.x=element_blank())+
+  ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+  geom_smooth(aes_string(x = "win_mid", y = "zt12_mean", color = "grb"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt23_mean", color = "org"),method = "loess", se = FALSE, span = 1/10)+
+  facet_wrap(~chr_num, ncol = 9)+
+  scale_color_manual(values=c(grb,org),name = "contrast",
+                     labels = c("1996-2007", "2007-2017"))+
+  ylim(-0.05, 0.05)+theme(legend.position = c(0.95, 0.2))+
+  ggtitle(pop)
+print(p)
+
+```
+
+## Within population chromosomes with putative inversions (7,12,15,16,20)
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+plot_af_chromosome <- function(pop,years,win,step,chrs){
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+freqs_win <- freqs_win[freqs_win$chr_num %in% chrs,]
+
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = "zt01_mean")) + 
+     geom_point(size = 1, color = gry,alpha = 0.7, shape = 1)+
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(method = "loess", se = FALSE, span = 1/10, color = red)+
+     facet_wrap(~chr_num, ncol = 1)+
+     ggtitle(paste(pop,years, sep = " "))
+print(p)
+}
+
+
+plot_af_chromosome_within <- function(pop,win,step,chrs){
+
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+freqs_win <- freqs_win[freqs_win$chr_num %in% chrs,]
+
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = "zt01_mean")) + 
+  theme_minimal()+
+  theme(axis.text.x=element_blank())+
+  ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+  geom_smooth(aes_string(x = "win_mid", y = "zt01_mean", color = "grb"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt12_mean", color = "lir"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt23_mean", color = "org"),method = "loess", se = FALSE, span = 1/10)+
+  facet_wrap(~chr_num, ncol = 3)+
+  scale_color_manual(values=c(lir,grb,org),name = "contrast",
+                     labels = c("1991-1996", "1996-2007", "2007-2017"))+
+  ylim(-0.05, 0.05)+
+  ggtitle(pop)
+print(p)
+
+}
+
+# chr 7
+pop <- "PWS"
+chrs <- c(7)
+
+plot_af_chromosome(pop,"zt01_mean",win,step,chrs)
+#plot_af_chromosome(pop,"zt12_mean",win,step,chrs)
+#plot_af_chromosome(pop,"zt23_mean",win,step,chrs)
+plot_af_chromosome_within(pop,win,step,chrs)
+
+pop <- "TB"
+plot_af_chromosome_within(pop,win,step,chrs)
+
+
+pop <- "SS"
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+freqs_win <- freqs_win[freqs_win$chr_num %in% chrs,]
+
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = "zt12_mean")) + 
+  theme_minimal()+
+  theme(axis.text.x=element_blank())+
+  ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+  geom_smooth(aes_string(x = "win_mid", y = "zt12_mean", color = "lir"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt23_mean", color = "org"),method = "loess", se = FALSE, span = 1/10)+
+  facet_wrap(~chr_num, ncol = 3)+
+  scale_color_manual(values=c(grb,org),name = "contrast",
+                     labels = c("1996-2007", "2007-2017"))+
+  ylim(-0.05, 0.05)+
+  ggtitle(pop)
+print(p)
+
+
+# all inversions
+pop <- "PWS"
+years <- "zt01_mean"
+win <- "1mb"
+step <- "100kb"
+chrs <- c(7,12,15,16,20)
+
+plot_af_chromosome(pop,"zt01_mean",win,step,chrs)
+plot_af_chromosome_within(pop,win,step,chrs)
+
+pop <- "TB"
+plot_af_chromosome_within(pop,win,step,chrs)
+
+
+pop <- "SS"
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
+freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
+freqs_win <- freqs_win[freqs_win$chr_num %in% chrs,]
+
+p <- ggplot(freqs_win, aes_string(x = "win_mid", y = "zt12_mean")) + 
+  theme_minimal()+
+  theme(axis.text.x=element_blank())+
+  ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+  geom_smooth(aes_string(x = "win_mid", y = "zt12_mean", color = "lir"),method = "loess", se = FALSE, span = 1/10)+
+  geom_smooth(aes_string(x = "win_mid", y = "zt23_mean", color = "org"),method = "loess", se = FALSE, span = 1/10)+
+  facet_wrap(~chr_num, ncol = 3)+
+  scale_color_manual(values=c(grb,org),name = "contrast",
+                     labels = c("1996-2007", "2007-2017"))+
+  ylim(-0.05, 0.05)+
+  ggtitle(pop)
+print(p)
+
+
+```
+
+
+## Between Populations
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+
+# chr 7
+chrs <- c(7)
+
+all_pops1 <- all_pops[all_pops$chr_num %in% chrs,]
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 9)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt01_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt01_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+  scale_color_manual(values=c(red,blu),name = "population",
+                     labels = c("PWS","TB"))+
+  ylim(-0.05, 0.05)+
+  ggtitle("1991-1996")
+
+print(p)
+  
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 9)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt12_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt12_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+       geom_smooth(aes_string(x = "win_mid", y = "zt12_s", color = "yel"),
+                 method = "loess", se = FALSE, span = 1/10)+
+  scale_color_manual(values=c(red,blu,yel),name = "population",
+                     labels = c("PWS","TB","SS"))+
+  ylim(-0.05, 0.05)+
+  ggtitle("1996-2006/07")
+
+print(p)
+
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 9)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_s", color = "yel"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     scale_color_manual(values=c(red,blu,yel),name = "population",
+                        labels = c("PWS","TB","SS"))+
+  ylim(-0.05, 0.05)+
+  ggtitle("2006/07-2017")
+
+print(p)
+
+
+
+
+
+# all inversions
+chrs <- c(7,12,15,16,20)
+
+all_pops1 <- all_pops[all_pops$chr_num %in% chrs,]
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 3)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt01_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt01_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+  scale_color_manual(values=c(red,blu),name = "population",
+                     labels = c("PWS","TB"))+
+  ylim(-0.05, 0.05)+
+  ggtitle("1991-1996")
+
+print(p)
+  
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 3)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt12_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt12_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+       geom_smooth(aes_string(x = "win_mid", y = "zt12_s", color = "yel"),
+                 method = "loess", se = FALSE, span = 1/10)+
+  scale_color_manual(values=c(red,blu,yel),name = "population",
+                     labels = c("PWS","TB","SS"))+
+  ylim(-0.05, 0.05)+
+  ggtitle("1996-2006/07")
+
+print(p)
+
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 3)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_s", color = "yel"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     scale_color_manual(values=c(red,blu,yel),name = "population",
+                        labels = c("PWS","TB","SS"))+
+  ylim(-0.05, 0.05)+
+  ggtitle("2006/07-2017")
+
+print(p)
+
+```
+
+
+
+
+
+
 # Identify windows where allele frequencies showed shifts in the same direction
 
 Out of 70234 50kb windows, what percentage consistently:
@@ -293,7 +633,7 @@ Out of 70234 50kb windows, what percentage consistently:
 
 pop <- "PWS"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
@@ -329,7 +669,7 @@ print(l)
 
 pop <- "TB"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
@@ -364,7 +704,7 @@ print(l)
 
 pop <- "SS"
 
-freqs_win <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_50kb_win_10kb_step.txt")
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
@@ -426,7 +766,7 @@ Are there any windows that show:
 
 pop <- "PWS"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 # identify windows where allele frequencies increased between each sampling period
@@ -455,7 +795,7 @@ pws_decreased_freq <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_m
 
 pop <- "TB"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 # identify windows where allele frequencies increased between each sampling period
@@ -484,7 +824,7 @@ tb_decreased_freq <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_me
 
 pop <- "SS"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 # identify windows where allele frequencies increased between each sampling period
@@ -529,7 +869,7 @@ venn(list(PWS_down=pws_decreased_freq$windex,
 
 pop <- "PWS"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 
 # identify windows where allele frequencies increased between each sampling period
@@ -616,7 +956,7 @@ genes_overlap <- join_overlap_intersect(tops, genes) %>% as.data.frame()
 
 pop <- "PWS"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
@@ -649,7 +989,7 @@ pws_dn_up_up <- freqs_win[freqs_win$zt01_mean <= 0 &
 
 pop <- "TB"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
@@ -701,7 +1041,7 @@ venn(list(PWS_dn_up_up=pws_dn_up_up$windex,
 
 pop <- "PWS"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
@@ -734,7 +1074,7 @@ pws_dn_up_up <- freqs_win[freqs_win$zt01_mean <= quantile(freqs_win$zt01_mean, .
 
 pop <- "TB"
 
-freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_50kb_win_10kb_step.txt", sep = ""))
+freqs_win <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/",pop,"_shifts_",win,"_win_",step,"_step.txt", sep = ""))
 freqs_win$chr_num <- factor(freqs_win$chr, levels = c(1:26))
 colnames(freqs_win)[c(1:3)] <- c("seqnames","start","end")
 
