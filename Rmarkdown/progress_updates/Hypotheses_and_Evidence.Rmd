@@ -31,16 +31,6 @@ library(windowscanr)
 library(ggpubr)
 #BiocManager::install("seqinr")
 
-  # Get upper triangle of the correlation matrix
-  get_upper_tri <- function(cormat){
-    cormat[lower.tri(cormat)]<- NA
-    return(cormat)
-  }
-
-    get_lower_tri<-function(cormat){
-    cormat[upper.tri(cormat)] <- NA
-    return(cormat)
-  }
 
 # color-blind friendly 
 # Wong, B. Points of view: Color blindness. Nat Methods (2011).
