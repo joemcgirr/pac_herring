@@ -121,19 +121,19 @@ missense
 ```{r}
 # # format SNP table (output from gatk variantsToTable)
 
-# snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/snp_table_VEP.txt", header =FALSE)
-# head(snp)
-# snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
-# snp$end <- snp$start 
-# snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
-# snp$strand <- "+"
-# head(snp)
-# snp <- snp[c("chromosome", "start","end","allele","strand")]
+#snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt", header =FALSE)
+#head(snp)
+#snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
+#snp$end <- snp$start 
+#snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
+#snp$strand <- "+"
+#head(snp)
+#snp <- snp[c("chromosome", "start","end","allele","strand")]
 
-# #write.table(snp, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/snp_table_VEP_standard_format.txt", col.names = FALSE, row.names = FALSE, sep = "\t", quote = FALSE)
+#write.table(snp, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_snp_table_VEP_standard_format.txt", col.names = FALSE, row.names = FALSE, sep = "\t", quote = FALSE)
 
 # identify missense
-vep <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/VEP_output_all_snps.txt", header =FALSE,comment.char = "#")
+vep <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_VEP.txt", header =FALSE,comment.char = "#")
 head(vep)
 colnames(vep) <- c("Uploaded_variation","Location","Allele","Gene","Feature","Feature_type","Consequence","cDNA_position","CDS_position","Protein_position","Amino_acids","Codons","Existing_variation","Extra")
 
@@ -166,7 +166,9 @@ Estimate allele frequencies for each population with ANGSD
 
 
 # check all coding mutations
+lof <- rbind(stop_gained,start_lost,stop_lost)
 lof <- rbind(stop_gained,start_lost,stop_lost,missense)
+
 # #check individual types of mutations
 # lof <- stop_gained
 # lof <- missense
@@ -177,7 +179,7 @@ lof <- lof %>% separate(Location, into = c("chromo","position"), sep = ":")
 lof$chromo <- paste("chr",lof$chromo, sep = "")
 
 pop <- "PWS91"
-maf <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/maf_for_vep/",pop,"_vcf.mafs", sep = ""), header =TRUE)
+maf <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/mafs/",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.mafs", sep = ""), header =TRUE)
 maf <- maf[c("chromo","position", "knownEM")]
 colnames(maf)[colnames(maf)=="knownEM"] <- pop
 maf <- merge(lof,maf, by = c("chromo","position"))
@@ -186,7 +188,7 @@ pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06",
 
 for (pop in pop_names) {
   
-maf1 <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/maf_for_vep/",pop,"_vcf.mafs", sep = ""), header =TRUE)
+maf1 <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/mafs/",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.mafs", sep = ""), header =TRUE)
 maf1 <- maf1[c("chromo","position", "knownEM")]
 colnames(maf1)[colnames(maf1)=="knownEM"] <- pop
 maf <- merge(maf,maf1, by = c("chromo","position"))
@@ -211,7 +213,7 @@ an <- aov(maf_stack$value~maf_stack$ind)
 summary(an)
 TukeyHSD(an)
 
-focal_pops <- c("PWS91","PWS96","PWS07","PWS17")
+focal_pops <- c("PWS91","PWS96","PWS07","PWS17","")
 print("anova for focal populations:")
 print(focal_pops)
 maf_stack <- stack(maf_box[c(focal_pops)])
@@ -243,4 +245,78 @@ TukeyHSD(an)
 
 
 ```
+
+```{r}
+
+t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
+
+pop <- "PWS91"
+maf <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", sep = ""), sep =" ",header =FALSE,col.names = c("chromo","position","knownEM"))
+colnames(maf)[colnames(maf)=="knownEM"] <- pop
+maf <- merge(lof,maf, by = c("chromo","position"))
+
+pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+for (pop in pop_names) {
+  
+maf1 <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", sep = ""), sep =" ",header =FALSE,col.names = c("chromo","position","knownEM"))
+colnames(maf1)[colnames(maf1)=="knownEM"] <- pop
+maf <- merge(maf,maf1, by = c("chromo","position"))
+
+}
+
+maf_box <- maf[,3:16]
+
+maf_box %>% 
+  gather(key="MesureType", value="Val") %>%
+  ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
+  geom_boxplot()+
+  xlab("\npopulation/year") + ylab("LoF allele frequency\n")+
+  #geom_violin()+
+    theme_minimal()+
+    #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+    scale_fill_manual(values=c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir))
+
+
+```
+
+
+```{r}
+
+gff <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/annotations/Clupea_harengus.Ch_v2.0.2.100.gff3",header = FALSE, sep = "\t",comment.char = '#')
+#head(gff)
+colnames(gff) <- c("seqnames","source","type","start","end","score","strand","phase","attributes")
+gff$seqnames <- paste("chr" , as.character(gff$seqnames),sep = "")
+genes <- gff[gff$type=="gene",]
+genes <- genes %>% separate(attributes, c("at1","at2"), remove = FALSE,sep = "Name=") %>% separate(at2, c("gene_name","at3"), extra = "drop",sep = ";")
+genes <- select(genes, -at1,-at3)
+g <- genes[genes$strand == "\\.",]
+#head(genes)
+genes <- droplevels(genes)
+
+ahr <- genes[grep("ahr", genes$attributes),]
+arnt <- genes[grep("arnt", genes$attributes),]
+aipl <- genes[grep("aipl", genes$attributes),]
+
+hydrocarbon <- genes[grep("hydrocarbon", genes$attributes),]
+hydrocarbon$start <- hydrocarbon$start - 1000
+hydrocarbon$end <- hydrocarbon$end + 1000
+hydrocarbon <- hydrocarbon %>% as_granges()
+
+maf_pops <- maf
+names(maf_pops)[names(maf_pops) == "chromo"] <- "seqnames"
+names(maf_pops)[names(maf_pops) == "position"] <- "start"
+maf_pops$start <- as.numeric(maf_pops$start)
+maf_pops$end <- as.numeric(maf_pops$start) +1
+maf_pops <- maf_pops%>%as_granges()
+
+hydrocarbon <- join_overlap_intersect(hydrocarbon,maf_pops) %>% as.data.frame()
+genes <- genes %>% as_granges()
+
+all_genes <- join_overlap_intersect(genes,maf_pops) %>% as.data.frame()
+
+
+```
+
+
 

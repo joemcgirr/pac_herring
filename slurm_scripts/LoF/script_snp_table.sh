@@ -14,8 +14,12 @@ module load maven
 module load java 
 module load GATK/4.1.4.1 
 
-gatk VariantsToTable -V /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm.vcf.gz -F CHROM -F POS -F REF -F ALT -O /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_outliers_rm_table.txt 
+gatk IndexFeatureFile -F /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz  
+gatk VariantsToTable -V /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz -F CHROM -F POS -F REF -F ALT -O /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table.txt 
 
+sed 's/chr//g' /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table.txt > /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt  
+sed -i 's/	/:/g' /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt 
+sed -i '1d' /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt 
 
 
 #run: sbatch script_snp_table.sh

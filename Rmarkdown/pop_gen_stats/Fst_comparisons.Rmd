@@ -249,7 +249,7 @@ pop2 <- "SS17"
 
 fsts <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/fst_pbs/maf05/", full.names=T)
 
-fsts <- fsts[1]
+fsts <- c(fsts[1],fsts[11])
 #f <- fsts[1]
 
 for (f in fsts){  

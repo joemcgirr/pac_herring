@@ -9,11 +9,12 @@
 #SBATCH --mail-type=ALL
 #SBATCH -p high 
 
-module load vcftools 
-vcftools --gzvcf /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --plink --out /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 
+#module load vcftools 
+#vcftools --gzvcf /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --plink --out /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 
 
 module load plink 
-plink --file /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_indep_pairwise_100_10_0.8 --threads 4 
+#plink --file /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_indep_pairwise_100_10_0.8 --threads 4 
+plink --file /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --r2 --out /home/jamcgirr/ph/data/plink/population_SS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_r2 --threads 4 
 
 
 #command to run: sbatch script_SS96_LD.sh

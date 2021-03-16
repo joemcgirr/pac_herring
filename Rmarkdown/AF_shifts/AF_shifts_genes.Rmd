@@ -1,0 +1,210 @@
+---
+title: "AF_shifts_genes"
+author: "Joe McGirr"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: no
+    df_print: paged
+    number_sections: no
+    theme: paper
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_depth: 5
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(plyranges)
+library(ggpubr)
+library(venn)
+
+#BiocManager::install("seqinr")
+
+  # Get upper triangle of the correlation matrix
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+    get_lower_tri<-function(cormat){
+    cormat[upper.tri(cormat)] <- NA
+    return(cormat)
+  }
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+# Load data
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+win <- "1mb"
+step <- "100kb"
+
+freqs_win_p <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/PWS_shifts_",win,"_win_",step,"_step.txt",sep = ""))
+freqs_win_t <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/TB_shifts_",win,"_win_",step,"_step.txt",sep = ""))
+freqs_win_s <- read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/window/SS_shifts_",win,"_win_",step,"_step.txt",sep = ""))
+
+all_pops <- data.frame(chr = freqs_win_p$chr,
+                       win_mid = freqs_win_p$win_mid,
+                       zt01_p = freqs_win_p$zt01_mean,
+                       zt02_p = freqs_win_p$zt02_mean,
+                       zt03_p = freqs_win_p$zt03_mean,
+                       zt12_p = freqs_win_p$zt12_mean,
+                       zt13_p = freqs_win_p$zt13_mean,
+                       zt23_p = freqs_win_p$zt23_mean,
+                       zt01_t = freqs_win_t$zt01_mean,
+                       zt02_t = freqs_win_t$zt02_mean,
+                       zt03_t = freqs_win_t$zt03_mean,
+                       zt12_t = freqs_win_t$zt12_mean,
+                       zt13_t = freqs_win_t$zt13_mean,
+                       zt23_t = freqs_win_t$zt23_mean,
+                       zt12_s = freqs_win_s$zt12_mean,
+                       zt13_s = freqs_win_s$zt13_mean,
+                       zt23_s = freqs_win_s$zt23_mean)
+
+
+all_pops$chr_num <- factor(all_pops$chr, levels = c(1:26))
+
+```
+
+# Look at shifts near ahr genes
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+gff <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/annotations/Clupea_harengus.Ch_v2.0.2.100.gff3",header = FALSE, sep = "\t",comment.char = '#')
+#head(gff)
+colnames(gff) <- c("seqnames","source","type","start","end","score","strand","phase","attributes")
+#gff$seqnames <- paste("chr" , as.character(gff$seqnames),sep = "")
+
+genes <- gff[gff$type=="gene",]
+genes <- genes %>% separate(attributes, c("at1","at2"), remove = FALSE,sep = "Name=") %>% separate(at2, c("gene_name","at3"), extra = "drop",sep = ";")
+genes <- select(genes, -at1,-at3)
+g <- genes[genes$strand == "\\.",]
+#head(genes)
+genes <- droplevels(genes)
+
+ahr <- genes[grep("ahr", genes$attributes),]
+arnt <- genes[grep("arnt", genes$attributes),]
+aipl <- genes[grep("aipl", genes$attributes),]
+
+hydrocarbon <- genes[grep("hydrocarbon", genes$attributes),]
+hydrocarbon$start <- hydrocarbon$start - 1000
+hydrocarbon$end <- hydrocarbon$end + 1000
+chrs <- unique(sort(hydrocarbon$seqnames))
+
+
+i <- 22
+#for (i in chrs){
+all_pops1 <- all_pops[all_pops$chr_num %in% i,]
+hydro1 <- hydrocarbon[hydrocarbon$seqnames %in% i,]
+
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 9)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt01_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt01_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+  scale_color_manual(values=c(red,blu),name = "population",
+                     labels = c("PWS","TB"))+
+  geom_vline(aes(xintercept = start), hydro1)+
+  #ylim(-0.05, 0.05)+
+  ggtitle("1991-1996")
+
+print(p)
+
+#}
+  
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 9)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt12_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt12_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+       geom_smooth(aes_string(x = "win_mid", y = "zt12_s", color = "yel"),
+                 method = "loess", se = FALSE, span = 1/10)+
+  scale_color_manual(values=c(red,blu,yel),name = "population",
+                     labels = c("PWS","TB","SS"))+
+  geom_vline(aes(xintercept = start), hydro1)+
+  #ylim(-0.05, 0.05)+
+  ggtitle("1996-2006/07")
+
+print(p)
+
+p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) + 
+     theme_minimal()+
+     theme(axis.text.x=element_blank())+
+     facet_wrap(~chr_num, ncol = 9)+
+     ylab(expression(paste(Delta, "z")))+ xlab("")+ 
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_p", color = "blu"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_t", color = "red"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     geom_smooth(aes_string(x = "win_mid", y = "zt23_s", color = "yel"),
+                 method = "loess", se = FALSE, span = 1/10)+
+     scale_color_manual(values=c(red,blu,yel),name = "population",
+                        labels = c("PWS","TB","SS"))+
+    geom_vline(aes(xintercept = start), hydro1)+
+  #ylim(-0.05, 0.05)+
+  ggtitle("2006/07-2017")
+
+print(p)
+
+
+genes_ranges      <- hydrocarbon %>% as_granges()
+all_pops$seqnames <- all_pops$chr
+all_pops$start    <- all_pops$win_mid - 500000
+all_pops$end      <- all_pops$win_mid + 500000
+
+freqs_ranges <- all_pops %>% as_granges()
+
+gf <- join_overlap_intersect(genes_ranges, freqs_ranges) %>% as.data.frame()
+
+sampling_per <- c("zt01_p","zt12_p","zt23_p",
+                  "zt01_t","zt12_t","zt23_t",
+                  "zt12_s","zt23_s")
+gf_box <- gf[,sampling_per]
+
+gf_box %>% 
+  gather(key="MesureType", value="Val") %>%
+  ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
+  geom_boxplot()+
+  xlab("\npopulation/year") + ylab("∆z ahr genes\n")+
+  #geom_violin()+
+    theme_minimal()+
+    #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+    scale_fill_manual(values=c(red,blu,red,yel,blu,red,yel,blu))
+
+```
