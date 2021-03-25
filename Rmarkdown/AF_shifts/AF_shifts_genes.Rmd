@@ -35,16 +35,6 @@ library(venn)
 
 #BiocManager::install("seqinr")
 
-  # Get upper triangle of the correlation matrix
-  get_upper_tri <- function(cormat){
-    cormat[lower.tri(cormat)]<- NA
-    return(cormat)
-  }
-
-    get_lower_tri<-function(cormat){
-    cormat[upper.tri(cormat)] <- NA
-    return(cormat)
-  }
 
 # color-blind friendly 
 # Wong, B. Points of view: Color blindness. Nat Methods (2011).
@@ -183,6 +173,9 @@ p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) +
 print(p)
 
 
+all_pops1 <- all_pops
+all_pops1[,3:17] <- abs(all_pops1[,3:17])
+
 genes_ranges      <- hydrocarbon %>% as_granges()
 all_pops$seqnames <- all_pops$chr
 all_pops$start    <- all_pops$win_mid - 500000
@@ -195,7 +188,7 @@ gf <- join_overlap_intersect(genes_ranges, freqs_ranges) %>% as.data.frame()
 sampling_per <- c("zt01_p","zt12_p","zt23_p",
                   "zt01_t","zt12_t","zt23_t",
                   "zt12_s","zt23_s")
-gf_box <- gf[,sampling_per]
+gf_box <- abs(gf[,sampling_per])
 
 gf_box %>% 
   gather(key="MesureType", value="Val") %>%
@@ -206,5 +199,55 @@ gf_box %>%
     theme_minimal()+
     #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
     scale_fill_manual(values=c(red,blu,red,yel,blu,red,yel,blu))
+
+
+
+
+all_pops1 <- all_pops
+all_pops1[,3:17] <- abs(all_pops1[,3:17])
+gf1 <- gf
+gf1[,14:28] <- abs(gf1[,14:28])
+
+
+zgenes <- gf1 %>% group_by(gene_name) %>% summarise(max = max(zt01_p)) %>%
+                  rename(max = "z") %>% mutate(regions = "genes") %>%
+                  select (-c(gene_name)) %>% as.data.frame()
+zall   <- data.frame(z = abs(all_pops1$zt01_p),regions = "all")
+z <- rbind(zall,zgenes)
+
+p<-ggplot(z, aes(x=z, fill=regions)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "",values=c(red,blu))+
+   ylab("density\n") + xlab(expression(paste(Delta, "z 1991-1996")))+
+   theme_minimal()
+p
+
+zgenes <- gf1 %>% group_by(gene_name) %>% summarise(max = max(zt12_p)) %>%
+                  rename(max = "z") %>% mutate(regions = "genes") %>%
+                  select (-c(gene_name)) %>% as.data.frame()
+zall   <- data.frame(z = abs(all_pops1$zt12_p),regions = "all")
+z <- rbind(zall,zgenes)
+
+p<-ggplot(z, aes(x=z, fill=regions)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "",values=c(red,blu))+
+   ylab("density\n") + xlab(expression(paste(Delta, "z 1996-2007")))+
+   theme_minimal()
+p
+
+
+zgenes <- gf1 %>% group_by(gene_name) %>% summarise(max = max(zt23_p)) %>%
+                  rename(max = "z") %>% mutate(regions = "genes") %>%
+                  select (-c(gene_name)) %>% as.data.frame()
+zall   <- data.frame(z = abs(all_pops1$zt23_p),regions = "all")
+z <- rbind(zall,zgenes)
+
+p<-ggplot(z, aes(x=z, fill=regions)) +
+   geom_density(alpha=0.4)+
+   scale_fill_manual(name = "",values=c(red,blu))+
+   ylab("density\n") + xlab(expression(paste(Delta, "z 1996-2007")))+
+   theme_minimal()
+p
+
 
 ```

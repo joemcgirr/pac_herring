@@ -167,7 +167,7 @@ Estimate allele frequencies for each population with ANGSD
 
 # check all coding mutations
 lof <- rbind(stop_gained,start_lost,stop_lost)
-lof <- rbind(stop_gained,start_lost,stop_lost,missense)
+#lof <- rbind(stop_gained,start_lost,stop_lost,missense)
 
 # #check individual types of mutations
 # lof <- stop_gained
