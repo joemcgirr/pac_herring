@@ -76,8 +76,55 @@ barplot(ne_s, names.arg = pop_names, ylab = expression('N '[e]), col = c(red,red
 
 #dev.off()
 
+ne <- data.frame(pop = pop_names, Ne = ne_s)
+ne <- ne %>% separate(pop, 
+           into = c("pop", "year"), 
+           sep = "(?<=[A-Za-z])(?=[0-9])")
+ne$year <- sub("07", "06", ne$year)
+ne$year <- sub("91", "1991", ne$year)
+ne$year <- sub("96", "1996", ne$year)
+ne$year <- sub("06", "2006", ne$year)
+ne$year <- sub("17", "2017", ne$year)
+ne <- ne[1:11,]
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/ne_watterson.png", height = 5, width = 8, units = 'in', res = 600)
+
+ggplot(ne, aes(year, Ne, group = pop)) +
+    geom_point(aes(color = pop)) +
+    geom_line(aes(color = pop),size = 2) +
+    scale_color_manual(values = c(red,yel,blu))+
+    #geom_errorbar(aes(ymin = lower, ymax = upper), width=.05) +
+    labs(x = "", y = "Ne\n") +
+    theme_classic()+
+    theme(axis.text=element_text(size=16),axis.title=element_text(size=14))
+#dev.off()
+
 ```
 
+# Ne estimates from temporal covariance
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+# uses vince's results from ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf
+
+ne <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/vince/herring_Ne_estimates.tsv")
+ne$time <- paste(ne$start, ne$end, sep = " ")
+ne$time <- sub("2007", "2006", ne$time)
+
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/ne_temporal.png", height = 5, width = 8, units = 'in', res = 600)
+
+ggplot(ne, aes(time, Ne, group = sample)) +
+    geom_point(aes(color = sample)) +
+    geom_line(aes(color = sample),size = 2) +
+    scale_color_manual(values = c(red,yel,blu))+
+    geom_errorbar(aes(ymin = lower, ymax = upper), width=.05) +
+    labs(x = "", y = "Ne\n") +
+    theme_classic()+
+    theme(axis.text=element_text(size=16),axis.title=element_text(size=14))
+#dev.off()
+
+```
 
 ## LD Decay 
 ### No big differences in LD decay between populations. Drops to background levels between 200bp (Atlantic Herring LD drops off around 100bp).

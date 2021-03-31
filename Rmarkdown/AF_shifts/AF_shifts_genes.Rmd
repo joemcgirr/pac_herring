@@ -110,7 +110,7 @@ hydrocarbon$end <- hydrocarbon$end + 1000
 chrs <- unique(sort(hydrocarbon$seqnames))
 
 
-i <- 22
+i <- 20
 #for (i in chrs){
 all_pops1 <- all_pops[all_pops$chr_num %in% i,]
 hydro1 <- hydrocarbon[hydrocarbon$seqnames %in% i,]

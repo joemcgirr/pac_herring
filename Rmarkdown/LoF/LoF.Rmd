@@ -207,13 +207,27 @@ maf_box %>%
     #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
     scale_fill_manual(values=c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir))
 
+
+maf_box <- maf[,3:13]
+names(maf_box) <- as.character(c(1:9,99,999))
+maf_box %>% 
+  gather(key="MesureType", value="Val") %>%
+  ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
+  geom_boxplot()+
+  xlab("\npopulation/year") + ylab("LoF allele frequency\n")+
+  #geom_violin()+
+    theme_minimal()+
+    #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+    scale_fill_manual(values=c(red,red,red,red,yel,yel,yel,blu,blu,blu,blu))
+
+
 maf_stack <- stack(maf_box)
 print("anova for all populations")
 an <- aov(maf_stack$value~maf_stack$ind)
 summary(an)
 TukeyHSD(an)
 
-focal_pops <- c("PWS91","PWS96","PWS07","PWS17","")
+focal_pops <- c("PWS91","PWS96","PWS07","PWS17")
 print("anova for focal populations:")
 print(focal_pops)
 maf_stack <- stack(maf_box[c(focal_pops)])
