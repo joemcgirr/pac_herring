@@ -1020,7 +1020,7 @@ p1 <- thetas %>%
       theme_minimal()
       #geom_jitter(height = 0, width = 0.1, alpha = 0.1)
 
-#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/pi_angsd.png", height = 5, width = 7, units = 'in', res = 600)
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/pi_angsd.png", height = 5, width = 7, units = 'in', res = 600)
 
 p1
 
