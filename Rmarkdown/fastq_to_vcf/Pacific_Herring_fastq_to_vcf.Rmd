@@ -24,7 +24,7 @@ pre, code {white-space:pre !important; overflow-x:auto}
 ```
 
 # Summary
-This notebook results from an R markdown file that generates scripts to create a `.vcf` file for 1000+ Pacific herring samples (low coverage whole genomes). The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
+This notebook is an R markdown file that generates scripts to create a `.vcf` file for 1000+ Pacific herring samples (low coverage whole genomes). The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
 This notebook uses the R package reticulate with python to automate the tedious process of writing bash scripts for each job run on the computing cluster. These scripts were made to run on the Farm cluster which uses SLURM scheduling. Each bash script has a SLURM header.
 

@@ -801,7 +801,7 @@ print(p)
 
 ```
 
-
+ 
 # Nucleotide diversity 
 ## Use ANGSD to estimate SFS using genotype likelihoods
 The way ANGSD estimates pi changed with an update (from doThetas to safToThetas) and the estimates are way too high (https://github.com/ANGSD/angsd/issues/336). This issue has to do with invariant sites. In order to account for invariant sites, I run ANGSD directly on .bam files to create an .saf file for each population. Due to memory constraints, I randomly down sample the number of input .bam files to match the lowest population sample size (n = 41)
