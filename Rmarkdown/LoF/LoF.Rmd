@@ -8,7 +8,7 @@ output:
     collapsed: no
     df_print: paged
     number_sections: yes
-    theme: cerulean
+    theme: paper
     toc: yes
     toc_depth: 5
     toc_float: yes
@@ -45,11 +45,15 @@ gry<-  '#BBBBBB'
 
 ```
 
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
 # Summary
 
-This notebook uses an Ensembl tool (Variant Effect Predictor) to identify putative loss-of-function alleles and examine their frequency in each population.
+This notebook uses an Ensembl tool (Variant Effect Predictor) to identify putative loss-of-function alleles and examine their frequency in each population. It also checks the frequency of LoF alleles within genes that are in the aryl hydrocarbon signalling pathway. 
 
-## Variant Effect Predictor VEP
+# Variant Effect Predictor VEP
 [Ensemble resource](https://www.ensembl.org/vep). 
 
 Input is:  
@@ -63,18 +67,79 @@ start_lost
 stop_lost  
 missense  
 
-```{r}
-#### format SNP table (output from gatk variantsToTable function)
+# Generate snp table input
+GATK VariantsToTable
 
-# snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt", header =FALSE)
-# head(snp)
-# snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
-# snp$end <- snp$start 
-# snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
-# snp$strand <- "+"
-# snp <- snp[c("chromosome", "start","end","allele","strand")]
+## snp table script
+
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=snp_table
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e snp_table_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load R 
+module load maven 
+module load java 
+module load GATK/4.1.4.1 
+
+gatk IndexFeatureFile -F /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz  
+gatk VariantsToTable -V /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz -F CHROM -F POS -F REF -F ALT -O /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table.txt 
+
+sed 's/chr//g' /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table.txt > /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt  
+sed -i 's/	/:/g' /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt 
+sed -i '1d' /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt 
+
+# run time ~ 1hr
+
+#run: sbatch script_snp_table.sh
+```
+
+## Format snp table 
+
+```{r,,class.source = 'fold-show', eval = FALSE}
+
+snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt", header =FALSE)
+head(snp)
+snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
+snp$end <- snp$start 
+snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
+snp$strand <- "+"
+snp <- snp[c("chromosome", "start","end","allele","strand")]
 
 #write.table(snp, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_snp_table_VEP_standard_format.txt", col.names = FALSE, row.names = FALSE, sep = "\t", quote = FALSE)
+```
+
+# Run VEP
+
+```{bash,eval=FALSE,class.source = 'fold-show'}
+#!/bin/bash
+
+#SBATCH --job-name=vep
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e vep_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+/home/jamcgirr/ph/data/LoF/ensembl-vep/vep --input_file /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_snp_table_VEP_standard_format.txt --output_file /home/jamcgirr/ph/data/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_VEP.txt --cache --species clupea_harengus 
+
+
+#run: sbatch script_vep.sh
+```
+
+
+# Examine number of different mutation types
+
+```{r,class.source = 'fold-show'}
 
 # identify missense
 vep <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_VEP.txt", header =FALSE,comment.char = "#")
@@ -98,10 +163,11 @@ nrow(missense)
 
 ```
 
-## Allele frequencies for each population
-Estimate allele frequencies for each population with ANGSD  
+# Allele frequencies for each population
 
-```{r}
+This relies on maf files generated in is an earlier step in the [popgen_stats.Rmd](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.Rmd) notebook (Dxy section)
+
+```{r,class.source = 'fold-show'}
 # knownEM specifies the algorithm used to estimate the allele frequency which is given under that column. Please note that this refers to the allele frequency of the allele labeled as minor.
 
 # maf file created using -ref to polarize.
@@ -139,6 +205,7 @@ maf <- merge(maf,maf1, by = c("chromo","position"))
 
 }
 
+# all pops
 maf_box <- maf[,3:16]
 
 maf_box %>% 
@@ -151,7 +218,7 @@ maf_box %>%
     #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
     scale_fill_manual(values=c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir))
 
-
+# just Pacific NorthEast pops
 maf_box <- maf[,3:13]
 names(maf_box) <- as.character(c(1:9,99,999))
 maf_box %>% 
@@ -165,27 +232,33 @@ maf_box %>%
     scale_fill_manual(values=c(red,red,red,red,yel,yel,yel,blu,blu,blu,blu))
 
 
+```
+
+# Check for significant differences in LoF allele frequencies between populations
+
+```{r,,class.source = 'fold-show'}
+
 maf_stack <- stack(maf_box)
 print("anova for all populations")
 an <- aov(maf_stack$value~maf_stack$ind)
 summary(an)
 TukeyHSD(an)
 
-focal_pops <- c("PWS91","PWS96","PWS07","PWS17")
-print("anova for focal populations:")
-print(focal_pops)
-maf_stack <- stack(maf_box[c(focal_pops)])
-an <- aov(maf_stack$value~maf_stack$ind)
-summary(an)
-TukeyHSD(an)
-
-focal_pops <- c("PWS96","PWS07","PWS17","SS96","SS06","SS17")
-print("anova for focal populations:")
-print(focal_pops)
-maf_stack <- stack(maf_box[c(focal_pops)])
-an <- aov(maf_stack$value~maf_stack$ind)
-summary(an)
-TukeyHSD(an)
+# focal_pops <- c("PWS91","PWS96","PWS07","PWS17")
+# print("anova for focal populations:")
+# print(focal_pops)
+# maf_stack <- stack(maf_box[c(focal_pops)])
+# an <- aov(maf_stack$value~maf_stack$ind)
+# summary(an)
+# TukeyHSD(an)
+# 
+# focal_pops <- c("PWS96","PWS07","PWS17","SS96","SS06","SS17")
+# print("anova for focal populations:")
+# print(focal_pops)
+# maf_stack <- stack(maf_box[c(focal_pops)])
+# an <- aov(maf_stack$value~maf_stack$ind)
+# summary(an)
+# TukeyHSD(an)
 
 
 # ensure REF and ALT match maf output
@@ -204,42 +277,9 @@ TukeyHSD(an)
 
 ```
 
-```{r}
+# Look for LoF alleles within AHR signaling pathway genes.
 
-t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
-
-pop <- "PWS91"
-maf <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", sep = ""), sep =" ",header =FALSE,col.names = c("chromo","position","knownEM"))
-colnames(maf)[colnames(maf)=="knownEM"] <- pop
-maf <- merge(lof,maf, by = c("chromo","position"))
-
-pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
-
-for (pop in pop_names) {
-  
-maf1 <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", sep = ""), sep =" ",header =FALSE,col.names = c("chromo","position","knownEM"))
-colnames(maf1)[colnames(maf1)=="knownEM"] <- pop
-maf <- merge(maf,maf1, by = c("chromo","position"))
-
-}
-
-maf_box <- maf[,3:16]
-
-maf_box %>% 
-  gather(key="MesureType", value="Val") %>%
-  ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
-  geom_boxplot()+
-  xlab("\npopulation/year") + ylab("LoF allele frequency\n")+
-  #geom_violin()+
-    theme_minimal()+
-    #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
-    scale_fill_manual(values=c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir))
-
-
-```
-
-
-```{r}
+```{r,class.source = 'fold-show'}
 
 gff <- read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/annotations/Clupea_harengus.Ch_v2.0.2.100.gff3",header = FALSE, sep = "\t",comment.char = '#')
 #head(gff)
@@ -276,5 +316,39 @@ all_genes <- join_overlap_intersect(genes,maf_pops) %>% as.data.frame()
 
 ```
 
+
+```{r, eval = FALSE}
+
+t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
+
+pop <- "PWS91"
+maf <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", sep = ""), sep =" ",header =FALSE,col.names = c("chromo","position","knownEM"))
+colnames(maf)[colnames(maf)=="knownEM"] <- pop
+maf <- merge(lof,maf, by = c("chromo","position"))
+
+pop_names = c("PWS96","PWS07","PWS17","TB91","TB96","TB06","TB17","SS96","SS06","SS17","BC17","WA17","CA17")
+
+for (pop in pop_names) {
+  
+maf1 <-read.delim(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_",pop,"_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", sep = ""), sep =" ",header =FALSE,col.names = c("chromo","position","knownEM"))
+colnames(maf1)[colnames(maf1)=="knownEM"] <- pop
+maf <- merge(maf,maf1, by = c("chromo","position"))
+
+}
+
+maf_box <- maf[,3:16]
+
+maf_box %>% 
+  gather(key="MesureType", value="Val") %>%
+  ggplot( aes(x=MesureType, y=Val, fill=MesureType)) +
+  geom_boxplot()+
+  xlab("\npopulation/year") + ylab("LoF allele frequency\n")+
+  #geom_violin()+
+    theme_minimal()+
+    #geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+    scale_fill_manual(values=c(grb,org,red,red,red,red,yel,yel,yel,blu,blu,blu,blu,lir))
+
+
+```
 
 

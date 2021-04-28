@@ -1,5 +1,5 @@
 ---
-title: "Pacific Herring LD and pi"
+title: "Pacific herring effective population size and linkage disequilibrium"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
@@ -45,11 +45,19 @@ gry<-  '#BBBBBB'
 
 ```
 
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
+# Summary
+
+This notebook estimates long-term effective population size (Ө = 4Neµ) and plots Ne for each population. Plots short-term estimates of Ne estimated by [Vince Buffalo](https://vincebuffalo.com/). Measures linkage disequilibrium with PLINK and plots LD decay.
 
 # Ne estimates from Watterson's theta
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
 
-# Rough Ne estimate using waterson's theta
+Uses sfs generated in the [popgen_stats notebook](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.Rmd)
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 # http://evomics.org/learning/population-and-speciation-genomics/2018-population-and-speciation-genomics/angsd-activity-sfs-fst-pbs/
 
@@ -103,7 +111,9 @@ ggplot(ne, aes(year, Ne, group = pop)) +
 
 # Ne estimates from temporal covariance
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+Vince measured the variance in temporal changes in allele frequency across sampling periods, and this measure is inversely proportional to effective population size.
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 # uses vince's results from ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf
 
@@ -126,10 +136,86 @@ ggplot(ne, aes(time, Ne, group = sample)) +
 
 ```
 
-## LD Decay 
-### No big differences in LD decay between populations. Drops to background levels between 200bp (Atlantic Herring LD drops off around 100bp).
+# Linkage Disequilibrium
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+Estimate LD with PLINK
+
+example script
+
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=BC17_LD
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e BC17_LD_%A_%a.err 
+#SBATCH --time=1:00:00 
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+#module load vcftools 
+#vcftools --gzvcf /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --plink --out /home/jamcgirr/ph/data/plink/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 
+
+module load plink 
+#plink --file /home/jamcgirr/ph/data/plink/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_indep_pairwise_100_10_0.8 --threads 4 
+plink --file /home/jamcgirr/ph/data/plink/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --r2 --out /home/jamcgirr/ph/data/plink/population_BC17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_r2 --threads 4 
+
+#command to run: sbatch script_BC17_LD.sh
+
+```
+
+## Generate LD scripts
+
+```{python,results='hide', eval = FALSE}
+# LD with plink
+
+job_name = 'LD'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+
+sbatch_header(job_name,'8','8','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('module load plink \n')
+o.write('plink --file /home/jamcgirr/ph/data/vcfs/'+vcf_name+' --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/'+vcf_name+'_indep_pairwise_100_10_0.8 --threads 8 \n') 
+
+
+#run sbatch submission 
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+# ~2 min
+
+# LD for each population
+job_name = '_LD'
+infiles = ["BC17","CA17","PWS07","PWS17","PWS91","PWS96","SS06","SS17","SS96","TB06","TB17","TB91","TB96","WA17"]
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+for infile in infiles:
+    script = 'script_' + infile + job_name + '.sh'
+    sbatch_header_loop(job_name,'8','4','1', infile)
+    o = io.open(script,'a+', newline='\n')
+
+    
+    o.write('#module load vcftools \n')
+    o.write('#vcftools --gzvcf /home/jamcgirr/ph/data/vcfs/split_pops/maf05/population_'+infile+'_'+vcf_name+'.vcf.gz --plink --out /home/jamcgirr/ph/data/plink/population_'+infile+'_'+vcf_name+' \n\n')
+
+    o.write('module load plink \n')
+    o.write('#plink --file /home/jamcgirr/ph/data/plink/population_'+infile+'_'+vcf_name+' --indep-pairwise 100 10 0.8 --r2 --out /home/jamcgirr/ph/data/plink/population_'+infile+'_'+vcf_name+'_indep_pairwise_100_10_0.8 --threads 4 \n') 
+    o.write('plink --file /home/jamcgirr/ph/data/plink/population_'+infile+'_'+vcf_name+' --r2 --out /home/jamcgirr/ph/data/plink/population_'+infile+'_'+vcf_name+'_r2 --threads 4 \n') 
+
+    o.write('\n\n#command to run: sbatch '+script)
+    o.close()
+# ~ 5 min
+```
+
+## LD Decay 
+
+No big differences in LD decay between populations. Drops to background levels between 200bp (Atlantic Herring LD drops off around 100bp).
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 pop_names = c("PWS91","PWS96","PWS07","PWS17")
 pop_line <- c(4,3,2,1)
