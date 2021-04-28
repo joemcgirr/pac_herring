@@ -45,69 +45,14 @@ gry<-  '#BBBBBB'
 
 ```
 
+# Summary
 
-# Persite Fst
-
-## Post-collapse PWS populations vs. NE Pacific populations
-(PWS96 + PWS07 + PWS17) vs. (SS96 + SS06 + SS17 + BC17 + WA17)
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-
-plot_persite_fst<-function(fst){
-
-colnames(fst) <- c("chr","pos","alpha","beta")
-fst$fst <- fst$alpha / fst$beta
-fst <- na.omit(fst[fst$fst >=0,])
-print("Fst range")
-print(range(fst$fst))
-print("Fst mean")
-print(mean(fst$fst))
-
-fst <- fst %>% mutate(chr = as.numeric(gsub("chr", "", chr)))
-fst$chr_num <- factor(fst$chr, levels = c(1:26))
- 
-p <- ggplot(fst, aes(x = pos, y = fst)) + 
-      geom_point(size = 1, color = gry,alpha = 0.4, shape = 1)+
-      theme_minimal()+
-      theme(axis.text.x=element_blank())+
-      ylab("Fst\n")+ xlab("")+ 
-      #ggtitle(paste(pops[1],"vs. ", pops[2]))+
-      geom_smooth(method = "loess", se = FALSE, span = 1/10, color = blu)+
-      facet_wrap(~chr, ncol = 9)
-print(p)
-   
-}
-
-
-
-
-
-fst <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/fst_persite_folded_pops_PWS96_07_17_v_NEPac.txt", header = FALSE)
-plot_persite_fst(fst)
-
-```
-
-
-## contemporary PWS vs. contemporary NE Pacific populations
-(PWS17) vs. (SS17 + BC17 + WA17)
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-
-fst <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/fst_persite_folded_pops_PWS17_v_NEPac17.txt", header = FALSE)
-plot_persite_fst(fst)
-
-```
-
-## PWS pre-collapse vs. post-collapse
-```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
-
-fst <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/SFS/fst/fixed_pws_persite/fst_persite_folded_pops_PWS96_07_17_v_PWS91.txt", header = FALSE)
-plot_persite_fst(fst)
-
-
-```
+This notebook uses an Ensembl tool (Variant Effect Predictor) to identify putative loss-of-function alleles and examine their frequency in each population.
 
 ## Variant Effect Predictor VEP
-Ensemble resource. Input is:  
+[Ensemble resource](https://www.ensembl.org/vep). 
+
+Input is:  
   
 chromosome position Ref_Allele Alt_Allele  
 
@@ -119,16 +64,15 @@ stop_lost
 missense  
 
 ```{r}
-# # format SNP table (output from gatk variantsToTable)
+#### format SNP table (output from gatk variantsToTable function)
 
-#snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt", header =FALSE)
-#head(snp)
-#snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
-#snp$end <- snp$start 
-#snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
-#snp$strand <- "+"
-#head(snp)
-#snp <- snp[c("chromosome", "start","end","allele","strand")]
+# snp <-read.delim("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_table_VEP.txt", header =FALSE)
+# head(snp)
+# snp <- snp %>% separate(V1, into = c("chromosome","start","REF", "ALT"), sep =":")
+# snp$end <- snp$start 
+# snp$allele <- paste(snp$REF, snp$ALT, sep = "/")
+# snp$strand <- "+"
+# snp <- snp[c("chromosome", "start","end","allele","strand")]
 
 #write.table(snp, "C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/LoF/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_snp_table_VEP_standard_format.txt", col.names = FALSE, row.names = FALSE, sep = "\t", quote = FALSE)
 

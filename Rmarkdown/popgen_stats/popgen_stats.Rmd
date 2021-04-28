@@ -26,9 +26,7 @@ pre, code {white-space:pre !important; overflow-x:auto}
 
 # Summary
 
-This notebook generates scripts to calculate genome-wide summary statistics from a `.vcf` with ANGSD and visualize results. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pi_TajD_Fst_Dxy.Rmd).
-
-This notebook automates the tedious process of writing bash scripts for each job run on the computing cluster. Running this notebook will generate bash scripts using python and the R package reticulate. Bash scripts were made to run on the Farm cluster which uses SLURM scheduling. Each bash script has a SLURM header.
+This notebook generates scripts to estimate genome-wide summary statistics (nucleotide diversity, Tajima's D, Fst, Dxy, population branch statistic) from a `.vcf` with ANGSD and visualize results. 
 
 The vcf was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
@@ -41,7 +39,7 @@ minimum mapping quality = 30
 minor allele frequency > 5%  
 genotyping rate > 50% for each population (grouped by samping location and year)
 
-`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`available [here](https://osf.io/3cmkr/)
 
 Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 
@@ -490,6 +488,9 @@ ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
 ```
 
 # Dxy
+
+following workflow from [here](https://doi.org/10.1093/bioinformatics/btz200) with [this script](https://github.com/mfumagalli/ngsPopGen/blob/master/scripts/calcDxy.R)
+
 ## Create .maf files
 
 example script
