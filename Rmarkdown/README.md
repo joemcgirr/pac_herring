@@ -1,5 +1,5 @@
 # Main Workflows
-## AF_shifts
+## /AF_shifts
 ## inversions
 ## LD_Ne
 Estimates long-term effective population size (Ө = 4Neµ) and plots Ne for each population. Plots short-term estimates of Ne estimated by [Vince Buffalo](https://vincebuffalo.com/). Measures linkage disequilibrium with PLINK and plots LD decay.
