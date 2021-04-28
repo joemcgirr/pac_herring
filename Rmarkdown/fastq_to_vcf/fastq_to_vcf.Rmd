@@ -1,5 +1,5 @@
 ---
-title: "Pacific Herring fastq to vcf"
+title: "Pacific herring fastq to vcf"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
@@ -24,11 +24,12 @@ pre, code {white-space:pre !important; overflow-x:auto}
 ```
 
 # Summary
-This notebook is an R markdown file that generates scripts to create a `.vcf` file for 1000+ Pacific herring samples (low coverage whole genomes). The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
+This notebook is used to generate multiple `.vcf` files containing variant data for 892 Pacific herring samples (low coverage whole genomes).
 
-This notebook uses the R package reticulate with python to automate the tedious process of writing bash scripts for each job run on the computing cluster. These scripts were made to run on the Farm cluster which uses SLURM scheduling. Each bash script has a SLURM header.
-
-Data info: `fastq`, `bam`, and `.vcf` files are currently located on the Farm sever at UC Davis (/home/eoziolor/phpopg/data/align/). Raw g.vcfs were generated from `.bam`s aligned to c. harengus fasta.
+Data info: 
+- `fastq`, `bam`, and `.vcf` files are currently located on the Farm sever at UC Davis (/home/eoziolor/phpopg/data/align/).
+- Raw `g.vcfs` were generated from `.bam` files aligned to the Atlantic herring reference genome [c. harengus Ch_v2.0.2 on Ensembl](https://uswest.ensembl.org/Clupea_harengus/Info/Index?db=core).
+- `.vcf` files are also available [here](https://osf.io/3cmkr/) 
 
 Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 

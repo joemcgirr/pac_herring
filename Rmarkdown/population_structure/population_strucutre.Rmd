@@ -1,5 +1,5 @@
 ---
-title: "Pacific Herring Population Structure"
+title: "Pacific herring population structure"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
@@ -38,7 +38,7 @@ minimum mapping quality = 30
 minor allele frequency > 5%  
 genotyping rate > 50% for each population (grouped by samping location and year)
 
-`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf` available [here](https://osf.io/3cmkr/)
 
 Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 
@@ -549,12 +549,10 @@ plot(p1$plot[[1]])
 
 # some jobs didnt finish k19 and k20, so just using 18
 
-logs <- as.data.frame(read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/ngsadmix/likelihoods_all_reps.txt", header = TRUE))
-logs <- logs[logs$K < 19,]
-logs$K <- c(rep("1", 10), rep("2", 10), rep("3", 10), rep("4", 
-    10), rep("5", 10), rep("6", 10), rep("7", 10), rep("8", 10))
-write.table(logs[, c(2, 1)], "logfile_formatted", row.names = F, 
-    col.names = F, quote = F)
+# logs <- as.data.frame(read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/ngsadmix/likelihoods_all_reps.txt", header = TRUE))
+# logs <- logs[logs$K < 19,]
+# logs$K <- c(rep("1", 10), rep("2", 10), rep("3", 10), rep("4", 10), rep("5", 10), rep("6", 10), rep("7", 10), rep("8", 10))
+# write.table(logs[, c(2, 1)], "logfile_formatted", row.names = F, col.names = F, quote = F)
 
 
 # source("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/evalAdmix/visFuns.R")
@@ -594,7 +592,7 @@ popvae.py --infile /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP20
 
 ### Generate popVAE scripts
 ```{python,results='hide', eval = FALSE}
-jjob_name = 'popvae'
+job_name = 'popvae'
 
 sbatch_header(job_name,'32','4','144')
 script = 'script_' + job_name + '.sh'
