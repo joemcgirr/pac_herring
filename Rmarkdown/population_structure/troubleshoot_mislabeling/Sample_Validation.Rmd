@@ -1,0 +1,709 @@
+---
+title: "Sample Validation"
+author: "Joe McGirr"
+date: "6/25/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(ggpubr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggspatial)
+library(pophelper)
+#BiocManager::install("visFuns.R")
+
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+
+## Run PCAngsd on chr 1, 2, and 3
+vcf = minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/samples_in_vcf.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+
+chr <- "1"
+C <- as.matrix(read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/PCAngsd/chr",chr,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.cov", sep = "")))
+e <- eigen(C)
+pca <-data.frame(Sample=vcf_sample_info$Sample, 
+                 pop=vcf_sample_info$Population.Year,
+                 plate=vcf_sample_info$Sequence.Plate,
+                 PC1=e$vectors[,1],PC2=e$vectors[,2],
+                 PC3=e$vectors[,3],PC4=e$vectors[,4],
+                 PC5=e$vectors[,5],PC6=e$vectors[,6],
+                 PC7=e$vectors[,7],PC8=e$vectors[,8],
+                 PC9=e$vectors[,9],PC10=e$vectors[,10],
+                 stringsAsFactors=FALSE)
+
+prop_explained <- c()
+for (s in e$values[1:10]) {
+  #print(s / sum(e$values))
+  prop_explained <- c(prop_explained,round(((s / sum(e$values))*100),2))
+}
+
+pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+pca1 <- pca
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("all populations and sampling years chr 1")
+
+chr <- "2"
+C <- as.matrix(read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/PCAngsd/chr",chr,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.cov", sep = "")))
+e <- eigen(C)
+pca <-data.frame(Sample=vcf_sample_info$Sample, 
+                 pop=vcf_sample_info$Population.Year,
+                 plate=vcf_sample_info$Sequence.Plate,
+                 PC1=e$vectors[,1],PC2=e$vectors[,2],
+                 PC3=e$vectors[,3],PC4=e$vectors[,4],
+                 PC5=e$vectors[,5],PC6=e$vectors[,6],
+                 PC7=e$vectors[,7],PC8=e$vectors[,8],
+                 PC9=e$vectors[,9],PC10=e$vectors[,10],
+                 stringsAsFactors=FALSE)
+
+prop_explained <- c()
+for (s in e$values[1:10]) {
+  #print(s / sum(e$values))
+  prop_explained <- c(prop_explained,round(((s / sum(e$values))*100),2))
+}
+
+pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+pca1 <- pca
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("all populations and sampling years chr 2")
+
+chr <- "3"
+C <- as.matrix(read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/PCAngsd/chr",chr,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.cov", sep = "")))
+e <- eigen(C)
+pca <-data.frame(Sample=vcf_sample_info$Sample, 
+                 pop=vcf_sample_info$Population.Year,
+                 plate=vcf_sample_info$Sequence.Plate,
+                 PC1=e$vectors[,1],PC2=e$vectors[,2],
+                 PC3=e$vectors[,3],PC4=e$vectors[,4],
+                 PC5=e$vectors[,5],PC6=e$vectors[,6],
+                 PC7=e$vectors[,7],PC8=e$vectors[,8],
+                 PC9=e$vectors[,9],PC10=e$vectors[,10],
+                 stringsAsFactors=FALSE)
+
+prop_explained <- c()
+for (s in e$values[1:10]) {
+  #print(s / sum(e$values))
+  prop_explained <- c(prop_explained,round(((s / sum(e$values))*100),2))
+}
+
+pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+pca1 <- pca
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("all populations and sampling years chr 3")
+  
+
+```
+
+  
+<span style="color:red">**conclusion: not an artifact of chr1**</span>  
+  
+
+## Run PCA with PLINK (hard calls, does not account for genotype likelihoods)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+# PLINK pca
+
+ eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.eigenvec", header=F, stringsAsFactors = F)
+ eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.eigenval", header=F, stringsAsFactors = F)
+ names(eigenvec)[names(eigenvec)=="V1"] <- "Sample"
+ vcf_sample_info <- inner_join(eigenvec,pop_info, by = "Sample")
+ 
+ pca <-data.frame(sample=vcf_sample_info$Sample, 
+                  pop=vcf_sample_info$Population.Year,
+                  plate=vcf_sample_info$Sequence.Plate,
+                  PC1=vcf_sample_info$V3,
+                  PC2=vcf_sample_info$V4,
+                  PC3=vcf_sample_info$V5,
+                  PC4=vcf_sample_info$V6,
+                  stringsAsFactors=FALSE)
+ 
+ prop_explained <- c()
+ for (s in eigenval$V1) {
+   #print(s / sum(eigenval$V1))
+   prop_explained <- c(prop_explained,round(((s / sum(eigenval$V1))*100),2))
+ }
+ 
+ 
+ pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ pca1 <- pca
+ 
+ ggplot(data = pca1)+
+   geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+   scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+   scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+   xlab(paste("PC1: ", prop_explained[1],"%",sep = ""))+
+   ylab(paste("PC2: ", prop_explained[2],"%",sep = ""))+
+   theme_bw()+
+   #geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+   ggtitle("all populations and sampling years\ngenome-wide")
+
+ 
+
+
+```
+
+
+<span style="color:red">**conclusion: not an artifact of PCAngsd **</span>  
+
+## Run MDS with PLINK (chr 1)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+mds <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/chr_1ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.mds", header = TRUE, stringsAsFactors = FALSE)
+#head(mds)
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/samples_in_vcf.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+names(mds)[names(mds)=="IID"] <- "Sample"
+mds <- inner_join(mds,pop_info, by = "Sample")
+
+mds <- mds %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+mds1 <- mds
+
+ggplot(data = mds1)+
+   geom_point(data = mds1, aes(x = C1, y = C2, fill = pop, color = pop, shape = year), size = 3)+
+   scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+   scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+   xlab("coordinate 1")+
+   ylab("coordinate 2")+
+   theme_bw()+
+   #geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+   ggtitle("all populations and sampling years\nchr1")
+
+
+
+```
+
+<span style="color:red">**conclusion: not an artifact of PCA **</span>  
+
+
+## Check sequencing plates
+vcf = minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/samples_in_vcf.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+
+chr <- "1"
+C <- as.matrix(read.table(paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/PCAngsd/chr",chr,"_ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5.cov", sep = "")))
+e <- eigen(C)
+pca <-data.frame(Sample=vcf_sample_info$Sample, 
+                 pop=vcf_sample_info$Population.Year,
+                 plate=vcf_sample_info$Sequence.Plate,
+                 PC1=e$vectors[,1],PC2=e$vectors[,2],
+                 PC3=e$vectors[,3],PC4=e$vectors[,4],
+                 PC5=e$vectors[,5],PC6=e$vectors[,6],
+                 PC7=e$vectors[,7],PC8=e$vectors[,8],
+                 PC9=e$vectors[,9],PC10=e$vectors[,10],
+                 stringsAsFactors=FALSE)
+
+prop_explained <- c()
+for (s in e$values[1:10]) {
+  #print(s / sum(e$values))
+  prop_explained <- c(prop_explained,round(((s / sum(e$values))*100),2))
+}
+
+pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+pca1 <- pca
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  #xlim(-0.055,-0.04)+ylim(-0.05,-0.025)+
+  #xlim(-0.05,-0.042)+ylim(-0.035,-0.025)+
+  #xlim(-0.055,-0.04)+ylim(-0.031,-0.025)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)
+  geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle("samples labeled by sequencing plate\nchr 1")
+  
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  xlim(-0.05,-0.04)+ylim(-0.05,-0.015)+
+  #xlim(-0.05,-0.042)+ylim(-0.035,-0.025)+
+  #xlim(-0.055,-0.04)+ylim(-0.031,-0.025)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)
+  geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle("samples labeled by sequencing plate\nchr 1 zoomed in")
+
+pca2 <- pca %>% filter(pop != "TB")
+pca1 <- pca2 
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,lir,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,lir,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  xlim(-0.05,-0.04)+ylim(-0.05,-0.015)+
+  #xlim(-0.05,-0.042)+ylim(-0.035,-0.025)+
+  #xlim(-0.055,-0.04)+ylim(-0.031,-0.025)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)
+  geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle("samples labeled by sequencing plate\nchr 1 zoomed in, Togiak removed")
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,lir,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,lir,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  xlim(-0.05,-0.04)+ylim(-0.05,-0.015)+
+  #xlim(-0.055,-0.04)+ylim(-0.05,-0.038)+
+  geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle("samples labeled by location/year\nchr 1 zoomed in, Togiak removed")
+
+pca2 <- pca %>% filter(pop == "TB")
+pca1 <- pca2 
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(blu,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(blu,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  #xlim(-0.055,-0.04)+ylim(-0.05,-0.025)+
+  #xlim(-0.05,-0.042)+ylim(-0.035,-0.025)+
+  #xlim(-0.055,-0.04)+ylim(-0.031,-0.025)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)
+  geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle("samples labeled by sequencing plate\nchr 1, Togiak only")
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(blu,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(blu,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  xlim(0,0.025)+
+  #xlim(-0.05,-0.042)+ylim(-0.035,-0.025)+
+  #xlim(-0.055,-0.04)+ylim(-0.031,-0.025)+
+  geom_text(aes(x = PC1, y = PC2), label = pca1$Sample)+
+  #geom_text(aes(x = PC1, y = PC2), label = pca1$plate)+
+  ggtitle("samples labeled by location/year\nchr 1 zommed in Togiak only")
+
+stranges <- c("0193_WA17","0194_WA17","0195_WA17","0196_WA17","0197_WA17","0198_WA17","0200_WA17","0209_PWS96","0210_PWS96","0211_PWS96","0212_PWS96","0213_PWS96","0214_PWS96","0215_PWS96","0216_PWS96","0225_PWS91","0226_PWS91","0227_PWS91","0228_PWS91","0229_PWS91","0230_PWS91","0231_PWS91","0232_PWS91","0201_TB17","0202_TB17","0203_TB17","0204_TB17","0205_TB17","0206_TB17","0207_TB17","0208_TB17")
+  
+print("31 strange outlier samples")
+print(stranges)
+
+```
+
+<span style="color:red">**conclusion: plate 4 looks problematic**</span>  
+  
+## NGSAdmix K = 6
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,fig.width= 12, fig.height= 6}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/samples_in_vcf.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+
+sfiles <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/qfiles/chr1/", full.names=T)
+slist <- readQ(files=sfiles,indlabfromfile = FALSE)
+
+
+rownames(slist[[3]]) <- vcf_sample_info$Sample
+onelabset <-vcf_sample_info[,3,drop=FALSE] 
+
+
+subsetpops <- c("BC17","CA17","PWS17","SS17","TB17","WA17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+
+
+```
+
+## Does NGSAdmix confirm PCA outliers?
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,fig.width= 12, fig.height= 6}
+
+subsetpops <- c("TB17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+vcf_sample_info[857:864,]$Sample
+
+subsetpops <- c("WA17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+vcf_sample_info[1132:1138,]$Sample
+
+subsetpops <- c("PWS96")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+vcf_sample_info[438:445,]$Sample
+
+subsetpops <- c("PWS91")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+vcf_sample_info[356:363,]$Sample
+
+confirmed_pca <- c(vcf_sample_info[857:864,]$Sample,
+                   vcf_sample_info[1132:1138,]$Sample,
+                   vcf_sample_info[438:445,]$Sample,
+                   vcf_sample_info[356:363,]$Sample)
+#length(stranges)
+#length(intersect(stranges,confirmed_pca))
+print("31 strange outlier samples confirmed")
+print(confirmed_pca)
+
+```
+
+ 
+<span style="color:red">**conclusion: all pca outliers are obvious in admixture data**</span>  
+  
+
+## Does NGSAdmix implicate other outliers?
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,fig.width= 12, fig.height= 6}
+
+subsetpops <- c("CA17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+
+subsetpops <- c("BC17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+
+subsetpops <- c("SS96","SS06","SS17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+
+subsetpops <- c("PWS91","PWS96","PWS07","PWS17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+
+subsetpops <- c("PWS07")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+vcf_sample_info[190:196,]$Sample
+vcf_sample_info[190:196,]$Sequence.Plate
+
+subsetpops <- c("PWS17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=T,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+vcf_sample_info[268:275,]$Sample
+vcf_sample_info[268:275,]$Sequence.Plate
+
+subsetpops <- c("TB91","TB96","TB06","TB17")
+p1 <- plotQ(slist[12],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
+      sortind="all",grplab = onelabset,subsetgrp=subsetpops,splabcol = "white",
+      grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+      divcol="white",divtype=2, divsize=1,clustercol=c(blu,red,yel,grb,org,lir))
+plot(p1$plot[[1]])
+
+stranges <- c(confirmed_pca,vcf_sample_info[190:196,]$Sample,vcf_sample_info[268:275,]$Sample)
+length(stranges)
+
+#write.table(as.data.frame(stranges),"C:/Users/jmcgirr/Desktop/strange_outliers.txt",quote = FALSE,row.names = FALSE)
+
+#write.table(as.data.frame(setdiff(vcf_sample_info$Sample,stranges)),"C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/plate4_outliers_rm.txt",quote = FALSE,row.names = FALSE)
+
+```
+
+
+<span style="color:red">**conclusion: NGSAdmix implicates and additional 15 samples from plate 4 labeled as PWS07 and PWS17 that look like southern samples (more like CA and WA). Total strange outliers = 46**</span>  
+
+  
+## Check alignment QC stats for .bam files using wgsMetrics (PICARD)
+### QC data below shows:  
+### outlier = 46 strange outlier samples  
+### normal  = all other TB, PWS, and WA samples  
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+
+bam_met_files <- list.files("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/multiqc_data/wgsMetrics/")
+met_files_in_pop_info <- c()
+for(met_file in bam_met_files){
+  met_files_in_pop_info <- c(met_files_in_pop_info,strsplit(met_file,"\\.collect_wgs_metrics.txt")[[1]])
+}
+
+pop_info <- pop_info[pop_info$Sample %in% met_files_in_pop_info, ]
+sample_name <- pop_info$Sample[1]
+bam_met <- paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/multiqc_data/wgsMetrics/",sample_name, ".collect_wgs_metrics.txt", sep = "")
+bam_met <- read.table(bam_met, header = TRUE, stringsAsFactors = FALSE, nrow= 1)
+bam_met$Sample <- sample_name
+pop_info_bams <- merge(pop_info,bam_met, by = "Sample")
+  
+for (sample_name in pop_info$Sample[2:(length(pop_info$Sample))])
+{
+  
+  bam_met <- paste("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/multiqc_data/wgsMetrics/",sample_name, ".collect_wgs_metrics.txt", sep = "")
+  bam_met <- read.table(bam_met, header = TRUE, stringsAsFactors = FALSE, nrow= 1)
+  bam_met$Sample <- sample_name
+  pop_info_bams1 <- merge(pop_info,bam_met, by = "Sample")
+  pop_info_bams <- rbind(pop_info_bams,pop_info_bams1)
+  
+}
+
+pop_info_bams <- pop_info_bams %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+
+strange <- pop_info_bams[pop_info_bams$Sample %in% stranges,]
+strange$outlier <- "outlier"
+normal <- pop_info_bams[! pop_info_bams$Sample %in% stranges,]
+normal$outlier <- "normal"
+pop_info_bams <- rbind(strange,normal)
+
+pop_info_bams <- pop_info_bams %>% filter(pop == "TB" |pop == "WA" | pop == "PWS")
+
+
+# COMPARE outliers with normal
+ggplot(pop_info_bams,aes(factor(outlier), MEAN_COVERAGE))+
+  geom_violin()+ 
+  xlab("") + ylab("mean coverage\n")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+ggplot(pop_info_bams,aes(factor(outlier), PCT_1X))+
+  geom_violin()+ 
+  xlab("") + ylab("")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+  ggtitle("fraction of bases that attained at least 1X sequence coverage")
+
+ggplot(pop_info_bams,aes(factor(outlier), PCT_EXC_TOTAL))+
+  geom_violin()+ 
+  xlab("") + ylab("")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+  ggtitle("fraction of aligned bases excluded due to all filters")
+
+ggplot(pop_info_bams,aes(factor(outlier), PCT_EXC_OVERLAP))+
+  geom_violin()+ 
+  xlab("") + ylab("")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)+
+  ggtitle("fraction of aligned bases that were filtered out because\nthey were the second observation from an insert with overlapping reads")
+
+```
+
+
+## Check .fastq files with FastQC
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/samples_in_vcf.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+vcf_sample_info <- vcf_sample_info %>% separate(Sample, into = c("sample_number", NA), sep = "_", remove = FALSE)
+
+
+qc <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/multiqc_data/multiqc_fastqc.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+#head(qc)
+#nrow(qc)
+#nrow(vcf_sample_info)
+#head(vcf_sample_info)
+qc <- qc %>% separate(Sample, into = c(NA, "sample_number",NA,NA,NA,"pair"), sep = "_", remove = TRUE)
+qc <- merge(vcf_sample_info,qc, by = "sample_number")
+
+strange <- qc[qc$Sample %in% stranges,]
+strange$outlier <- "outlier"
+normal <- qc[! qc$Sample %in% stranges,]
+normal$outlier <- "normal"
+qc <- rbind(strange,normal)
+#head(qc)
+
+# COMPARE outliers with normal
+ggplot(qc,aes(factor(outlier), Total.Sequences))+
+  geom_violin()+ 
+  xlab("") + ylab("total sequences\n")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+ggplot(qc,aes(factor(outlier), X.GC))+
+  #geom_violin()+ 
+  xlab("") + ylab("GC\n")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+ggplot(qc,aes(factor(outlier), total_deduplicated_percentage))+
+  #geom_violin()+ 
+  xlab("") + ylab("deduplicated percentage\n")+
+  geom_boxplot(width=0.1)+
+  theme_minimal()+
+  geom_jitter(height = 0, width = 0.1, alpha = 0.1)
+
+
+```
+
+
+
+## Remove plate 4 outliers and TB, run PCA with PLINK
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+# PLINK pca
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+
+eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plate4_outliers_rm_no_TB.eigenvec", header=F, stringsAsFactors = F)
+eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5_plate4_outliers_rm_no_TB.eigenval", header=F, stringsAsFactors = F)
+names(eigenvec)[names(eigenvec)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(eigenvec,pop_info, by = "Sample")
+ 
+ pca <-data.frame(sample=vcf_sample_info$Sample, 
+                  pop=vcf_sample_info$Population.Year,
+                  plate=vcf_sample_info$Sequence.Plate,
+                  PC1=vcf_sample_info$V3,
+                  PC2=vcf_sample_info$V4,
+                  PC3=vcf_sample_info$V5,
+                  PC4=vcf_sample_info$V6,
+                  stringsAsFactors=FALSE)
+ 
+ prop_explained <- c()
+ for (s in eigenval$V1) {
+   #print(s / sum(eigenval$V1))
+   prop_explained <- c(prop_explained,round(((s / sum(eigenval$V1))*100),2))
+ }
+ 
+ 
+ pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ pca1 <- pca
+ 
+ ggplot(data = pca1)+
+   geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+   scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
+   scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
+   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+   xlab(paste("PC1: ", prop_explained[1],"%",sep = ""))+
+   ylab(paste("PC2: ", prop_explained[2],"%",sep = ""))+
+   theme_bw()+
+   #xlim(-0.03,0.05)+
+   #geom_text(aes(x = PC1, y = PC2), label = pca1$sample)+
+   ggtitle("all populations and sampling years\ngenome-wide")
+
+ 
+
+
+```
+
+
+
+

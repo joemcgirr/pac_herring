@@ -1,0 +1,762 @@
+---
+title: "Pacific Herring Population Structure"
+author: "Joe McGirr"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: no
+    df_print: paged
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  html_notebook:
+    toc: yes
+    toc_depth: 5
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{css, echo=FALSE}
+pre, code {white-space:pre !important; overflow-x:auto}
+```
+
+# Summary
+This notebook generates scripts to perform population structure analyses with [PCAngsd](http://www.popgen.dk/software/index.php/PCAngsd),
+[PLINK PCA](https://www.cog-genomics.org/plink/1.9/strat), [NGSadmix](http://www.popgen.dk/software/index.php/NgsAdmix), and [popVAE](https://github.com/kr-colab/popvae).
+
+The data set is a filtered `.vcf` with 200k SNPs across 892 Pacific herring low coverage genomes:
+
+minimum depth = 600  
+maximum depth = 2000  
+minimum base quality = 20  
+minimum mapping quality = 30  
+minor allele frequency > 5%  
+genotyping rate > 50% for each population (grouped by samping location and year)
+
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
+
+Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
+
+# Load R libraries
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install(version = "3.12")
+
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(reticulate)
+library(ggpubr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggspatial)
+library(pophelper)
+library(rgeos)
+library(data.table)
+
+#BiocManager::install(c('magrittr', 'RcppArmadillo', 'rlang', 'tibble', 'vctrs', 'xfun'))
+#devtools::install_github('royfrancis/pophelper')
+#BiocManager::install("geiger")
+
+# color-blind friendly 
+# Wong, B. Points of view: Color blindness. Nat Methods (2011).
+bla <- "#000000"
+blu <- "#0072b2"
+grb <- "#56b4e9"
+lir <- "#cc79a7"
+gre <- "#009e73"
+red <- "#d55e00"
+org <- "#e69f00"
+yel <- "#f0e442"
+gry<-  '#BBBBBB'
+
+```
+
+# Load python libraries
+```{python, results='hide', eval = FALSE,class.source = 'fold-show'}
+import io
+import pandas as pd
+import numpy as np
+import math
+
+def sbatch_header(job,mem,tasks,hours):
+    #sbatch submission script header
+    script = 'script_' + job + '.sh'
+    outfile = io.open(script,'w', newline='\n')    
+    outfile.write('#!/bin/bash\n\n#SBATCH --job-name='+job+'\n')
+    outfile.write('#SBATCH --mem='+mem+'G \n')
+    outfile.write('#SBATCH --ntasks='+tasks+' \n')
+    outfile.write('#SBATCH -e '+job+'_%A_%a.err \n')
+    outfile.write('#SBATCH --time='+hours+':00:00  \n')
+    outfile.write('#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc\n#SBATCH --mail-type=ALL\n')
+    outfile.write('#SBATCH -p high \n\n')
+    outfile.close()
+    
+def sbatch_header_loop(job,mem,tasks,hours,infile):
+    #sbatch submission script header
+    script = 'script_' + infile + job + '.sh'
+    outfile = io.open(script,'w', newline='\n') 
+    jobname= infile + job   
+    outfile.write('#!/bin/bash\n\n#SBATCH --job-name='+jobname+'\n')
+    outfile.write('#SBATCH --mem='+mem+'G \n')
+    outfile.write('#SBATCH --ntasks='+tasks+' \n')
+    outfile.write('#SBATCH -e '+jobname+'_%A_%a.err \n')
+    outfile.write('#SBATCH --time='+hours+':00:00 \n')
+    outfile.write('#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc\n#SBATCH --mail-type=ALL\n')
+    outfile.write('#SBATCH -p high \n\n')
+    outfile.close()
+
+```
+
+# Plot population locations
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+theme_set(theme_bw())
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+sites <- data.frame(location= c("Cordova","Togiak Bay", "Sitka Sound", "Green Island", "Manchester WA",
+                                "Nunavachak","Gravina Point","San Francisco Bay","British Columbia","Rocky Bay"),
+                    population= c("PWS","Togiak","Sitka","PWS","WA","Togiak","PWS","CA","BC","PWS"),
+                    collection_years= c("2017","1991 + 1996 + 2017","1996 + 2006 + 2017","1991","2017",
+                                        "2006-07","2006-07","2017","2017","1996"),
+                    longitude = c(-145.767273,-160.421778,-135.603211,-147.532065,-122.529850,-160.046064,
+                                  -146.257331,-122.308856,-129.142209,-147.098320), 
+                    latitude = c(60.54014,58.941777,56.938869, 60.226742,47.554064,58.867054,
+                                 60.616651,37.692173,51.984516,60.348094),
+                    pop_longitude= c(-147, -160.42,-135.6, -147,-122.5,-160.42,-147,-122.4,-128.9,-147),
+                    pop_latitude=  c(60.54,58.8,56.93,60.54,47.6,58.8,60.54,37.69,52.1,60.54))
+simple_pops <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/simple_pops_size.txt",header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+
+
+# all populations
+ggplot(data = world) +
+  geom_sf() +
+  geom_point(data = sites, aes(x = longitude, y = latitude, fill = collection_years), size = 4, 
+             shape = 21) +
+  scale_fill_manual(name = "Collection Years",values=c(red,blu,gre,lir,org,grb))+
+  coord_sf(xlim = c(-165, -118), ylim = c(36, 65), expand = FALSE)+
+  xlab("") + ylab("")+
+  theme(legend.position = c(0.23, 0.31))
+  #scale_y_continuous(position='right')
+
+# grouped metapopulations
+p1 <- ggplot(data = world) +
+  geom_sf() +
+  geom_point(data = sites, aes(x = pop_longitude, y = pop_latitude, fill = population), size = 5, 
+             shape = 21) +
+  scale_fill_manual(name = "Collection Years",values=c(grb,org,red,yel,blu,lir))+
+  coord_sf(xlim = c(-165, -118), ylim = c(36, 65), expand = FALSE)+
+  xlab("") + ylab("")+
+  theme(legend.position = "none")+
+  annotate(geom = "text", x = -160.45, y = 57.5, label = "Togiak\nBay", 
+           color = "grey22", size = 3.5)+
+  annotate(geom = "text", x = -146.5, y = 58.7, label = "Prince William\nSound", 
+           color = "grey22", size = 3.5)+
+  annotate(geom = "text", x = -138, y = 56.5, label = "Sitka\nSound", 
+           color = "grey22", size = 3.5)+
+  annotate(geom = "text", x = -131, y = 50.8, label = "Kitasu\nBay", 
+           color = "grey22", size = 3.5)+
+  annotate(geom = "text", x = -127, y = 47.6, label = "Holmes\nHarbor", 
+           color = "grey22", size = 3.5)+
+  annotate(geom = "text", x = -126.7, y = 37.69, label = "San Francisco\nBay", 
+           color = "grey22", size = 3.5)+
+  annotation_scale(location = "tr", width_hint = 0.5) +
+  annotation_north_arrow(location = "tr", which_north = "true", 
+        pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+        style = north_arrow_fancy_orienteering) 
+  #scale_y_continuous(position='right')
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_locations/ph_map_scale.png",height = 7, width = 7, units = 'in', res = 600)
+p1
+#dev.off()
+
+```
+
+# Population structure
+## PCAngsd
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=PCAngsd
+#SBATCH --mem=16G 
+#SBATCH --ntasks=16 
+#SBATCH -e PCAngsd_%A_%a.err 
+#SBATCH --time=144:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load pcangsd 
+gzip /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL 
+python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 -threads 16 
+
+
+#command to run: sbatch script_PCAngsd.sh
+```
+
+### Generate PCAngsd scripts
+
+```{python,results='hide', eval = FALSE}
+job_name = 'PCAngsd'
+
+#git clone https://github.com/Rosemeis/pcangsd.git
+#cd pcangsd/\n')
+#python setup.py build_ext --inplace
+
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_maf0.05_minQ20_minMQ30_maxmiss0.5'
+
+sbatch_header(job_name,'16','16','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('module load pcangsd \n')
+
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+o.write('#gzip /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL \n')
+o.write('python /home/jamcgirr/apps/pcangsd/pcangsd.py -beagle /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL.gz -o /home/jamcgirr/ph/data/angsd/PCAngsd/'+vcf_name+' -threads 16 \n')
+
+
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+```
+
+### Plot
+PCA using genotype likelihoods 204153 SNPs 
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020_plate_rows.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/plates_1_through_5_rm.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+#write.table(vcf_sample_info[c("Sample", "Sequencing.Plate.Individual.No.", "Population.Year","Location","Year.Collected","Sample.ID")],"C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/sample_metadata.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+
+C <- as.matrix(read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/pcangsd/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.cov"))
+e <- eigen(C)
+pca <-data.frame(Sample=vcf_sample_info$Sample, 
+                 pop=vcf_sample_info$Population.Year,
+                 plate=vcf_sample_info$Sequence.Plate,
+                 plate_row=vcf_sample_info$plate_row,
+                 PC1=e$vectors[,1],PC2=e$vectors[,2],
+                 PC3=e$vectors[,3],PC4=e$vectors[,4],
+                 PC5=e$vectors[,5],PC6=e$vectors[,6],
+                 PC7=e$vectors[,7],PC8=e$vectors[,8],
+                 PC9=e$vectors[,9],PC10=e$vectors[,10],
+                 stringsAsFactors=FALSE)
+
+# % variance explained, explained 
+# https://stats.stackexchange.com/questions/22569/pca-and-proportion-of-variance-explained
+# https://aaronschlegel.me/principal-component-analysis-r-example.html
+
+pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+
+prop_explained <- c()
+for (s in e$values[1:10]) {
+  #print(s / sum(e$values))
+  prop_explained <- c(prop_explained,round(((s / sum(e$values))*100),2))
+}
+
+barplot(prop_explained, ylab = "% variance explained by PC", xlab = "PC",
+        names.arg=c(1:length(prop_explained)))
+
+pca1 <- pca
+#pca1 <- pca %>% filter(year == "17")
+
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/pca.png", height = 5, width = 6.5, units = 'in', res = 600)
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()#+
+  #ggtitle("all populations and sampling years")
+
+#dev.off()
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC3, y = PC4, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 3: ", prop_explained[3],"%\n",sep = ""))+
+  ylab(paste("PC 4: ", prop_explained[4],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("all populations and sampling years")
+
+
+# filter by year
+pca1 <- pca %>% filter(year == "17")
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("sampled 2017")
+
+pca1 <- pca %>% filter(year == "06" | year == "07")
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(red,yel,blu), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(red,yel,blu))+
+  scale_shape_manual(name = "year", values=c(21,21))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("sampled 2006/07")
+
+pca1 <- pca %>% filter(year == "96")
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(red,yel,blu), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(red,yel,blu))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("sampled 1996")
+
+pca1 <- pca %>% filter(year == "91")
+
+ggplot(data = pca1)+
+  geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(red,blu), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(red,blu))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab(paste("PC 1: ", prop_explained[1],"%\n",sep = ""))+
+  ylab(paste("PC 2: ", prop_explained[2],"%\n",sep = ""))+
+  theme_bw()+
+  ggtitle("sampled 1991")
+
+```
+
+## PLINK PCA
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=plink_PCA
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e plink_PCA_%A_%a.err 
+#SBATCH --time=24:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+module load plink 
+plink --file /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --pca --out /home/jamcgirr/ph/data/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05
+
+
+#command to run: sbatch script_plink_PCA.sh
+```
+
+### Generate PLINK PCA scripts
+```{python,results='hide', eval = FALSE}
+job_name = 'plink_PCA'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+
+sbatch_header(job_name,'8','4','24')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('module load plink \n')
+o.write('plink --file /home/jamcgirr/ph/data/vcfs/'+vcf_name+' --pca --out /home/jamcgirr/ph/data/plink/'+vcf_name+'\n') 
+
+
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+```
+
+### Plot
+PCA using hard calls 204153 SNPs 
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+# PLINK pca
+
+eigenvec <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.eigenvec", header=F, stringsAsFactors = F)
+eigenval <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.eigenval", header=F, stringsAsFactors = F)
+
+
+ names(eigenvec)[names(eigenvec)=="V1"] <- "Sample"
+ vcf_sample_info <- inner_join(eigenvec,pop_info, by = "Sample")
+ 
+ pca <-data.frame(sample=vcf_sample_info$Sample, 
+                  pop=vcf_sample_info$Population.Year,
+                  PC1=vcf_sample_info$V3,
+                  PC2=vcf_sample_info$V4,
+                  PC3=vcf_sample_info$V5,
+                  PC4=vcf_sample_info$V6,
+                  stringsAsFactors=FALSE)
+ 
+ prop_explained <- c()
+ for (s in eigenval$V1) {
+   #print(s / sum(eigenval$V1))
+   prop_explained <- c(prop_explained,round(((s / sum(eigenval$V1))*100),2))
+ }
+ 
+ barplot(prop_explained, ylab = "% variance explained by PC", xlab = "PC",
+         names.arg=c(1:length(prop_explained)))
+ 
+ pca <- pca %>% separate(pop, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ pca1 <- pca
+ 
+ ggplot(data = pca1)+
+   geom_point(data = pca1, aes(x = PC1, y = PC2, fill = pop, color = pop, shape = year), size = 3)+
+   scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+   scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+   xlab(paste("PC1: ", prop_explained[1],"%",sep = ""))+
+   ylab(paste("PC2: ", prop_explained[2],"%",sep = ""))+
+   theme_bw()
+
+
+```
+
+
+## NGSAdmix
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=NGSadmix
+#SBATCH --mem=8G 
+#SBATCH --ntasks=4 
+#SBATCH -e NGSadmix_%A_%a.err 
+#SBATCH --time=144:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+#git clone https://github.com/Rosemeis/pcangsd.git
+#cd pcangsd/
+#python setup.py build_ext --inplace
+
+module load angsd 
+gzip /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL 
+
+for i in {1..20} 
+do 
+NGSadmix -likes /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.BEAGLE.PL.gz -K $i -o /home/jamcgirr/ph/data/angsd/NGSadmix/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_k$i -P 4 
+done 
+
+
+#command to run: sbatch script_NGSadmix.sh
+```
+
+### Generate NGSAdmix scripts
+```{python,results='hide', eval = FALSE}
+job_name = 'NGSadmix'
+vcf_name = 'ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05'
+
+sbatch_header(job_name,'8','4','144')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')
+
+
+o.write('#git clone https://github.com/Rosemeis/pcangsd.git\n')
+o.write('#cd pcangsd/\n')
+o.write('#python setup.py build_ext --inplace\n\n')
+
+o.write('module load angsd \n')
+o.write('gzip /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL \n\n')
+
+o.write('for i in {1..20} \n')
+o.write('do \n')
+o.write('NGSadmix -likes /home/jamcgirr/ph/data/vcfs/'+vcf_name+'.BEAGLE.PL.gz -K $i -o /home/jamcgirr/ph/data/angsd/NGSadmix/'+vcf_name+'_k$i -P 4 \n')
+o.write('done \n')
+
+
+o.write('\n\n#command to run: sbatch '+script)
+o.close()
+
+```
+
+### Plot
+
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/plates_1_through_5_rm.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+
+sfiles <- list.files(path="C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/ngsadmix/qfiles/", full.names=T)
+slist <- readQ(files=sfiles,indlabfromfile = FALSE)
+
+onelabset <-vcf_sample_info[,3,drop=FALSE] 
+rownames(slist[[3]]) <- vcf_sample_info$Sample
+#if(length(unique(sapply(slist,nrow)))==1) slist <- lapply(slist,"rownames<-",labs$ind)
+
+# for (i in c(1:6)){
+# p1 <- plotQ(slist[i],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
+#             sortind="all",grplab = onelabset,
+#             grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+#             divcol="white",divtype=2, divsize=1,clustercol=c(grb,org,red,yel,blu,lir,gry))
+# plot(p1$plot[[1]])
+# }
+
+#attributes(slist)  
+subsetpops <- c("BC17","CA17","PWS17","SS17","TB17","WA17")
+#subsetpops <- c("TB91","TB96","TB06","TB17")
+#subsetpops <- c("PWS91","PWS96","PWS07","PWS17")
+#subsetpops <- c("SS96","SS06","SS17")
+#subsetpops <- c("BC17","CA17","WA17")
+
+for (i in c(12,14,15,16,17)){
+p1 <- plotQ(slist[i],returnplot=T,exportplot=F,basesize=17,showindlab=F,useindlab=T,
+            sortind="all",grplab = onelabset,subsetgrp=subsetpops,
+            grplabsize=6,linesize=2,pointsize=8, grplabangle=0, grplabjust=0.3, grplabheight=7,
+            divcol="white",divtype=2, divsize=1,clustercol=c(grb,org,red,yel,blu,lir,gry))
+plot(p1$plot[[1]])
+}
+
+# choose K with CLUMPAK
+#https://github.com/alexkrohn/AmargosaVoleTutorials/blob/master/ngsAdmix_tutorial.md
+
+
+# (for log in `ls *.log`; do grep -Po 'like=\K[^ ]+' $log; done) > logfile
+
+# some jobs didnt finish k19 and k20, so just using 18
+
+logs <- as.data.frame(read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/ngsadmix/likelihoods_all_reps.txt", header = TRUE))
+logs <- logs[logs$K < 19,]
+logs$K <- c(rep("1", 10), rep("2", 10), rep("3", 10), rep("4", 
+    10), rep("5", 10), rep("6", 10), rep("7", 10), rep("8", 10))
+write.table(logs[, c(2, 1)], "logfile_formatted", row.names = F, 
+    col.names = F, quote = F)
+
+
+# source("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/evalAdmix/visFuns.R")
+# 
+# r<-read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/evalAdmix/eval_k3_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.# 05_minQ20_maxmiss0.5")
+# q <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/angsd/NGSadmix/qfiles/chr1/k3_chr1_ph_filtered_snps_minDP600_maxDP2000_maf0.0# 5_minQ20_maxmiss0.5.qopt")
+# ord<-orderInds(pop = as.vector(vcf_sample_info$Population.Year), q = q)
+# 
+# # Plot correlation of residuals
+# plotCorRes(cor_mat = r, pop = as.vector(vcf_sample_info$Population.Year), ord = ord, title="Evaluation of admixture proportions with K=3", # max_z=0.1, min_z=-0.1)
+
+
+```
+
+## Popvae
+
+example script
+```{bash,eval=FALSE,class.source = 'fold-show'}
+
+#!/bin/bash
+
+#SBATCH --job-name=popvae
+#SBATCH --mem=32G 
+#SBATCH --ntasks=4 
+#SBATCH -e popvae_%A_%a.err 
+#SBATCH --time=144:00:00  
+#SBATCH --mail-user=jamcgirr@ucdavis.edu ##email you when job starts,ends,etc
+#SBATCH --mail-type=ALL
+#SBATCH -p high 
+
+source /home/jamcgirr/apps/my_python3.7/bin/activate 
+popvae.py --infile /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --out /home/jamcgirr/ph/data/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --seed 42 
+
+
+#run: sbatch script_popvae.sh
+```
+
+### Generate popVAE scripts
+```{python,results='hide', eval = FALSE}
+jjob_name = 'popvae'
+
+sbatch_header(job_name,'32','4','144')
+script = 'script_' + job_name + '.sh'
+o = io.open(script,'a+', newline='\n')  
+   
+o.write('source /home/jamcgirr/apps/my_python3.7/bin/activate \n')
+o.write('popvae.py --infile /home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf.gz --out /home/jamcgirr/ph/data/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05 --seed 42 \n')
+
+
+o.write('\n\n#run: sbatch '+script)
+o.close()
+
+
+```
+
+### Plot
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
+
+#theme_set(theme_classic())
+
+pop_info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/EVOS_MasterSheet_JoeMcGirr_April2020.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+aligned <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/familiarize/aligned_samples.txt", header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+pop_info <- pop_info[pop_info$Sample %in% aligned$sample,]
+vcf_samples <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/plink/plates_1_through_5_rm.txt", header = FALSE, stringsAsFactors = FALSE, sep = "\t")
+names(vcf_samples)[names(vcf_samples)=="V1"] <- "Sample"
+vcf_sample_info <- inner_join(vcf_samples,pop_info, by = "Sample")
+vcf_sample_info$sampleID <- vcf_sample_info$Sample
+
+#load data
+#pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_latent_coords.txt",header=T)
+
+#pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
+#names(pd)[1:2] <- c("LD1","LD2")
+#sd <- fread("data/pabu/pabu_test_sample_data.csv") #this has sample metadata for interpreting plots
+
+#merge tables
+#dd <- merge(pd,vcf_sample_info,by="sampleID")
+
+#plot VAE
+#ggplot(data=dd,aes(x=LD1,y=LD2,col=Population.Year))+
+#  geom_point()
+
+#png("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/figs/population_structure/pca.png", height = 5, width = 6.5, units = 'in', res = 600)
+
+pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_latent_coords.txt",header=T)
+names(pd)[1:2] <- c("LD1","LD2")
+dd <- merge(pd,vcf_sample_info,by="sampleID")
+dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+ggplot(data = dd)+
+  geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+  scale_fill_manual(values=c(grb,org,red,yel,blu,lir), guide=FALSE)+
+  scale_color_manual(name = "population", values=c(grb,org,red,yel,blu,lir))+
+  scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+  xlab("LD1")+
+  ylab("LD2")+
+  theme_bw()
+
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/NEPac17_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+#   scale_fill_manual(values=c(grb,red,yel,lir), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(grb,red,yel,lir))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+#   #scale_fill_manual(values=c(red), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(red))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/TB_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+#   #scale_fill_manual(values=c(red), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(blu))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/SS_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, color = pop, shape = year), size = 3)+
+#   #scale_fill_manual(values=c(red), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(bla))+
+#   scale_shape_manual(name = "year", values=c(22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+# pd <- fread("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/popvae/PWS_SS_random_thin_latent_coords.txt",header=T)
+# names(pd)[1:2] <- c("LD1","LD2")
+# dd <- merge(pd,vcf_sample_info,by="sampleID")
+# dd <- dd %>% separate(Population.Year, into = c("pop", "year"), sep = "(?<=[A-Za-z])(?=[0-9])")
+# ggplot(data = dd)+
+#   geom_point(data = dd, aes(x = LD1, y = LD2, fill = pop, color = pop, shape = year), size = 3)+
+#   scale_fill_manual(values=c(grb,org,red,yel,lir), guide=FALSE)+
+#   scale_color_manual(name = "population", values=c(grb,org,red,yel,lir))+
+#   scale_shape_manual(name = "year", values=c(21,22,23,24,25))+
+#   xlab("LD1")+
+#   ylab("LD2")+
+#   theme_bw()
+# 
+
+```
+
+
+
+
+
+
+```{r, include = FALSE, eval = FALSE}
+
+## Plot population survey: time series
+# data from The highs and lows of herring: A meta-analysis of patterns and factors in herring collapse and  recovery  
+# DOI:10.1111/faf.12452
+
+#time series data
+ts <- read.csv("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/population_surveys/herring_data_Trochta_2020.csv", header = TRUE, stringsAsFactors = FALSE)
+ts <- ts %>% filter(species == "Pacific herring")
+#head(ts)
+ts1 <- ts %>% 
+  group_by(mainname) %>%
+  mutate(quant_90 = quantile(biomass,.90)) %>%
+  filter(biomass >= quant_90) %>%
+  mutate(mean_quant_90= mean(biomass)) %>% as.data.frame()
+pws <- ts %>% filter(mainname == "Prince William Sound") %>%
+       mutate(normalized_biomass = biomass/103122.55)%>% as.data.frame()
+bc <- ts %>% filter(mainname == "British Columbia") %>%
+       mutate(normalized_biomass = biomass/6406.96) %>% as.data.frame()
+ts <- rbind(pws,bc)
+
+ggplot(data = ts)+
+  geom_point(data = ts, aes(x = year, y = normalized_biomass, color = mainname), size = 2)+
+  scale_color_manual(name = "population",values=c(grb,red))+
+  xlab("year") + ylab("normalized biomass\n")+theme_bw()
+
+#ggplot(data = ts)+
+#geom_point(data = ts, aes(x = year, y = recruits, color = mainname))
+#ggplot(data = ts)+
+#geom_point(data = ts, aes(x = year, y = catches, color = mainname))
+
+
+```
+
+
