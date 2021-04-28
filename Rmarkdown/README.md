@@ -2,7 +2,7 @@
 ## AF_shifts
 ## inversions
 ## LD_Ne
-Measures linkage disequilibrium with PLINK and plots LD decay. Estimates long-term effective population size (Ө = 4Neµ) and plots Ne for each population. Plots short-term estimates of Ne estimated by [Vince Buffalo](https://vincebuffalo.com/).
+Estimates long-term effective population size (Ө = 4Neµ) and plots Ne for each population. Plots short-term estimates of Ne estimated by [Vince Buffalo](https://vincebuffalo.com/). Measures linkage disequilibrium with PLINK and plots LD decay.
 ## LoF
 Use an Ensembl tool (Variant Effect Predictor) to identify putative loss-of-function alleles and examine their frequency in each population. It also checks the frequency of LoF alleles within genes that are in the aryl hydrocarbon signalling pathway. 
 ## popgen_stats
