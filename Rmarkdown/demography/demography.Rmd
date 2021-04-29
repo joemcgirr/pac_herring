@@ -1,5 +1,5 @@
 ---
-title: "Pacific Herring demography"
+title: "Pacific herring demography"
 author: "Joe McGirr"
 date: '`r Sys.Date()`'
 output:
@@ -24,7 +24,9 @@ pre, code {white-space:pre !important; overflow-x:auto}
 ```
 
 # Summary
-This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs across 892 low coverage genomes. The markdown file can be found [here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population/Pacific_Herring_demography.Rmd)
+This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs and the [moments pipeline](https://github.com/dportik/moments_pipeline).
+
+The reason these analyses are 'exploratory': the 1D and 2D sfs look strange even without a minor allele frequency threshold. It's likely because low coverage data leads to an overestimate of singletons, doubletons, etc. 
 
 The `.vcf` was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
@@ -37,7 +39,7 @@ minimum mapping quality = 30
 genotyping rate > 50% for each population (grouped by sampling location and year)
 NO MAF threshold
 
-`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf`
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf` available [here](https://osf.io/3cmkr/)
 
 Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 
@@ -168,7 +170,7 @@ How about 80% genotyping rate and DP > 50th %ile
 
 filters down to 25982 SNPs
 
-```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
+```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
 
 info <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_ld0.1.DP.NS.info", header = FALSE, stringsAsFactors = FALSE)
 head(info)
@@ -361,7 +363,7 @@ for infile in infiles:
 ```
 
 ## Plot 2D SFS
-```{python,results='hide', eval = FALSE}
+```{python,results='hide', eval = FALSE,class.source = 'fold-show'}
 
 #import moments
 #import matplotlib
@@ -375,16 +377,18 @@ Fst = fs.Fst()
 print(S)
 print(Fst)
 
-moments.Plotting.plot_single_2d_sfs(fs, vmin =1)
-matplotlib.pyplot.savefig("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/" + pops[0] + "_" + pops[1] + "_2d_sfs.png") 
-matplotlib.pyplot.close()
+# moments.Plotting.plot_single_2d_sfs(fs, vmin =1)
+# matplotlib.pyplot.savefig("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/moments/downsample/" + pops[0] + "_" + pops[1] + "_2d_sfs.png") 
+# matplotlib.pyplot.close()
 
 ```
 
 # Testing simple demographic models with moments pipeline
 
+Results (migration rates, time at split, Ne) are inconsistent. 
+
 ## one population split into two pops with symmetrical migration
-```{r}
+```{r,class.source = 'fold-show'}
 
 # http://evomics.org/wp-content/uploads/2016/01/dadi.pdf
 # In dadi, all parameters are scaled by the effective size of the ancestral population. To find

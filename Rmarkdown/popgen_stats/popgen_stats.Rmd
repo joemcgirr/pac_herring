@@ -39,7 +39,7 @@ minimum mapping quality = 30
 minor allele frequency > 5%  
 genotyping rate > 50% for each population (grouped by samping location and year)
 
-`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`available [here](https://osf.io/3cmkr/)
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf` available [here](https://osf.io/3cmkr/)
 
 Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 

@@ -46,6 +46,12 @@ gry<-  '#BBBBBB'
 pre, code {white-space:pre !important; overflow-x:auto}
 ```
 
+# Summary
+
+This notebook uses the [GenotypePlot package](https://github.com/JimWhiting91/genotype_plot) to visualize variation on chromosomes.
+
+# Subset main `.vcf` to include chromosome of interest
+
 example script
 ```{bash,eval=FALSE,class.source = 'fold-show'}
 
@@ -85,11 +91,11 @@ new_plot <- genotype_plot(vcf_object  =  my_vcf,
                           snp_label_size = 5000000,                          
                           colour_scheme=c(yel,org,red))
 
-pdf(paste("C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/inversions/",chr,"_snps.pdf",sep = ""),width=10,height=8)
+#pdf(paste("C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/inversions/",chr,"_snps.pdf",sep = ""),width=10,height=8)
 
 combine_genotype_plot(new_plot)
 
-dev.off()
+#dev.off()
 
 
 # plot allele frequencies for populations
@@ -100,11 +106,11 @@ new_plot <- genotype_plot(vcf_object  =  my_vcf,
                           plot_allele_frequency=TRUE,                    
                           invariant_filter = TRUE)                      
 
-pdf(paste("C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/inversions/",chr,"_AF.pdf",sep = ""),width=10,height=8)
+#pdf(paste("C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/inversions/",chr,"_AF.pdf",sep = ""),width=10,height=8)
 
 combine_genotype_plot(new_plot)
 
-dev.off()
+#dev.off()
 
 
 
@@ -142,11 +148,11 @@ new_plot <- genotype_plot(vcf_object  =  my_vcf,
 #                    geom_text(aes(x=1:length(new_plot$dendro_labels),y=-2.5,label=new_plot$dendro_labels))
 #dendro_with_tips
 
-pdf("C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/inversions/test_plot.pdf",width=10,height=8)
+#pdf("C:/Users/jmcgirr/Documents/GitHub/pac_herring/Rmarkdown/inversions/test_plot.pdf",width=10,height=8)
 
 combine_genotype_plot(new_plot)
 
-dev.off()
+#dev.off()
 
 ```
 

@@ -65,7 +65,7 @@ gry<-  '#BBBBBB'
 
 # Summary
 
-This notebook analyzes allele frequency shifts between Pacific Herring samples collected in 1991, 1996, 2006-7, and 2017. The summary statistic ∆z is the difference in arcsine square-root transformed minor allele frequencies (Following methods similar to those outlined in the [Longshanks experiment](https://elifesciences.org/articles/42014#s4)). 
+This notebook analyzes allele frequency shifts between Pacific herring samples collected in 1991, 1996, 2006/7, and 2017. The summary statistic ∆z is the difference in arcsine square-root transformed minor allele frequencies (Following methods similar to those outlined in the [Longshanks experiment](https://elifesciences.org/articles/42014#s4)). 
 
 The data set is a filtered `.vcf` with 200k SNPs across 892 Pacific herring low coverage genomes:
 
@@ -76,12 +76,11 @@ minimum mapping quality = 30
 minor allele frequency > 5%  
 genotyping rate > 50% for each population (grouped by samping location and year)
 
-`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf`
+`ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05.vcf` available [here](https://osf.io/3cmkr/)
 
 Written by Joe McGirr, postdoc in Andrew Whitehead's lab.
 
 # Output allele frequncies from vcf
-
 
 example script
 ```{bash,eval=FALSE,class.source = 'fold-show'}
@@ -134,12 +133,13 @@ for infile in infiles:
 
 #AF is calculated as AC/AN, where AC is total ALT allele count and AN is total allele called in genotypes
 
+# Prince William Sound
 t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
 t1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t1_AF"))
 t2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS07_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t2_AF"))
 t3 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_PWS17_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t3_AF"))
 
-
+# Togiak Bay
 t0 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB91_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t0_AF"))
 t1 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB96_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t1_AF"))
 t2 <- read.table("C:/Users/jmcgirr/Documents/Whitehead_Lab/ph/freqs/population_TB06_ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5_maf0.05_freqs.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("chr","pos","t2_AF"))
@@ -616,10 +616,6 @@ p <- ggplot(all_pops1, aes_string(x = "win_mid", y = "zt01_p")) +
 print(p)
 
 ```
-
-
-
-
 
 
 # Identify windows where allele frequencies showed shifts in the same direction
@@ -1117,7 +1113,7 @@ venn(list(PWS_dn_up_up=pws_dn_up_up$windex,
 
 # Permutation tests to determine significant outlier windows.
 
-Randomly sample individuals from t0 and t1 and measure change in allele frequencies in 50kb windows. Identify genome-wide mean of means across windows and quantiles across 1000 permutations.
+Randomly sample individuals from t0 and t1 and measure change in allele frequencies in 50kb windows. Identify genome-wide mean of means across windows and quantiles across 1000 permutations. See [AF_permutations.R](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/AF_shifts/AF_permutations.R)
 
 
 ```{r, message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7,class.source = 'fold-show'}
@@ -1222,7 +1218,7 @@ venn(list(PWS_dn_up_up=pws_dn_up_up$windex,
 ```
 
 # Fst windows
-Which loci are consistently differentiated between sampling periods
+Which loci are consistently differentiated between sampling periods?
 
 Find windows that show high Fst in 1991 v 1996, 1996 v 2007, and 2007 - 2017 comparisons
 ```{r, show = FALSE,message=FALSE, warning=FALSE, fig.width= 10, fig.height= 7}
