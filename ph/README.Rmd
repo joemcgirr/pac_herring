@@ -42,10 +42,10 @@ ph
 ```
 # dxy
 [see here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#5_Dxy)
-## maf05
+### maf05
 maf files are minor allele frequencies estimated with angsd using genotype likelihoods from master vcf.   
 FARM path: 
-## windows
+### windows
 dxy calculated in 50 kb sliding windows with 10kb steps
 
 ---
@@ -62,18 +62,49 @@ ph
 ```
 # familiarize
 Metadata for samples, troubleshooting sample mislabeling, quality control metrics
-## multiqc_data
+### multiqc_data
 QC results for .`fastq` and `.bam` using [multiqc](https://multiqc.info/)
-### wgsMetrics
+#### wgsMetrics
 QC results for each sample using [Picard tools](https://broadinstitute.github.io/picard/)   
 [see here for workflow](https://htmlpreview.github.io/?https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/fastq_to_vcf.html#5_Interrogate_alignment_files)
 
 ---
-# figs
----
+
+```
+ph
+│
+└───freqs
+│   │
+│   └───persite
+|   |
+|   └───window   
+
+```
 # freqs
+Allele frequencies pulled directly from the AF INFO from population `.vcf`s   
+AFs from hard calls, not genotype likelihoods (for those, see ph/dxy/maf05/)   
+[see here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/AF_shifts/AF_shifts.html)
+### persite
+Allele frequency differences between sampling periods within PWS, SS, and TB population.   
+These are acrsine transformed AF differences.
+### windows
+AF differences averaged across sliding windows (the 1mb windows are more informative than 50kb)
+
 ---
+
+```
+ph
+│
+└───freqs
+│   │
+│   └───persite
+|   |
+|   └───window   
+
+```
 # fst_pbs
+
+
 ---
 # LoF
 ---
