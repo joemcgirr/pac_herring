@@ -16,26 +16,51 @@ Description of files found in `/ph` available on OSF
 https://osf.io/3cmkr/
 
 ---
+```
+ph
+│
+└───annotations
+```
 # annotations
 Gene feature files for the [Atlantic herring reference genome on Ensembl Ch_v2.0.2](https://uswest.ensembl.org/Clupea_harengus/Info/Index)
 
 ---
 
+```
+ph
+│
+└───dxy
+│   │
+│   └───maf05
+|       |
+|       └───windows
+
+```
 # dxy
 [see here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#5_Dxy)
 ## maf05
 maf files are minor allele frequencies estimated with angsd using genotype likelihoods from master vcf.
 FARM path: 
-### windows
+## windows
 dxy calculated in 50 kb sliding windows with 10kb steps
 ---
 
+```
+ph
+│
+└───familiarize
+│   │
+│   └───multiqc_data
+|       |
+|       └───wgsMetrics
+
+```
 # familiarize
 Metadata for samples, troubleshooting sample mislabeling, quality control metrics
 ## multiqc_data
 QC results for .`fastq` and `.bam` using [multiqc](https://multiqc.info/)
 ### wgsMetrics
-QC results for each sample using Picard tools.
+QC results for each sample using [Picard tools](https://broadinstitute.github.io/picard/)
 [see here for workflow](https://htmlpreview.github.io/?https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/fastq_to_vcf.html#5_Interrogate_alignment_files)
 
 ---
