@@ -1,9 +1,5 @@
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-#![](https://github.com/joemcgirr/pac_herring/blob/master/ph_map-01.png?raw=true "pops")  
 
-```
 
 NOTE: 
 
@@ -71,19 +67,4 @@ QC results for each sample using Picard tools.
 # vince
 
 
-``````{r, echo=FALSE,eval=FALSE}
-library(knitr)
-my.jekyll.site <- ""
-KnitPost <- function(input, base.url = my.jekyll.site) {
-  opts_knit$set(base.url = base.url)
-  fig.path <- paste0("images/", sub(".Rmd$", "", basename(input)), "/")
-  opts_chunk$set(fig.path = fig.path)
-  opts_chunk$set(fig.cap = "center")
-  render_jekyll()
-  knit(input, envir = parent.frame())
-}
 
-setwd("C:/Users/jmcgirr/Documents/GitHub/pac_herring/ph/")
-KnitPost("C:/Users/jmcgirr/Documents/GitHub/pac_herring/ph/README.Rmd")
-
-```
