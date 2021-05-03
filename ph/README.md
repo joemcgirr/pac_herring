@@ -62,7 +62,7 @@ Metadata for samples, troubleshooting sample mislabeling, quality control metric
 QC results for .`fastq` and `.bam` using [multiqc](https://multiqc.info/)
 #### wgsMetrics
 QC results for each sample using [Picard tools](https://broadinstitute.github.io/picard/)   
-[see here for workflow](https://htmlpreview.github.io/?https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/fastq_to_vcf.html#5_Interrogate_alignment_files)
+[see here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/fastq_to_vcf.html#5_Interrogate_alignment_files)
 
 ---
 
