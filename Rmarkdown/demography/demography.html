@@ -11,7 +11,7 @@
 
 <meta name="author" content="Joe McGirr" />
 
-<meta name="date" content="2021-04-29" />
+<meta name="date" content="2021-05-03" />
 
 <title>Pacific herring demography</title>
 
@@ -2864,7 +2864,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Pacific herring demography</h1>
 <h4 class="author">Joe McGirr</h4>
-<h4 class="date">2021-04-29</h4>
+<h4 class="date">2021-05-03</h4>
 
 </div>
 
@@ -2875,7 +2875,7 @@ pre, code {white-space:pre !important; overflow-x:auto}
 <div id="summary" class="section level1">
 <h1><span class="header-section-number">1</span> Summary</h1>
 <p>This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs and the <a href="https://github.com/dportik/moments_pipeline">moments pipeline</a>.</p>
-<p>The reason these analyses are ‘exploratory’: the 1D and 2D sfs look strange even without a minor allele frequency threshold. It’s likely because low coverage data leads to an overestimate of singletons, doubletons, etc.</p>
+<p>These analyses are exploratory. The 1D and 2D sfs look strange even without a minor allele frequency threshold. It’s likely because low coverage data leads to an overestimate of singletons, doubletons, etc. I experimented with several different ways of generating 1D and 2D sfs.</p>
 <p>The <code>.vcf</code> was generated with <a href="https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd">these commands</a></p>
 <p>The starting data set is a filtered <code>.vcf</code> with 892 Pacific herring low coverage genomes:</p>
 <p>minimum depth = 600<br />

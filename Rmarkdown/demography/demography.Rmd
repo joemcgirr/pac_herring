@@ -26,7 +26,7 @@ pre, code {white-space:pre !important; overflow-x:auto}
 # Summary
 This notebook generates scripts for demographic inference in Pacific herring populations using unlinked biallelic SNPs and the [moments pipeline](https://github.com/dportik/moments_pipeline).
 
-The reason these analyses are 'exploratory': the 1D and 2D sfs look strange even without a minor allele frequency threshold. It's likely because low coverage data leads to an overestimate of singletons, doubletons, etc. 
+These analyses are exploratory. The 1D and 2D sfs look strange even without a minor allele frequency threshold. It's likely because low coverage data leads to an overestimate of singletons, doubletons, etc. I experimented with several different ways of generating 1D and 2D sfs.
 
 The `.vcf` was generated with [these commands](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/Pacific_Herring_fastq_to_vcf.Rmd)
 
