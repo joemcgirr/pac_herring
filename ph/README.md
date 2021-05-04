@@ -1,8 +1,7 @@
 
 
 
-## Description of files found in `/ph` available on OSF
-### https://osf.io/3cmkr/
+## Description of files found in `/ph` available on OSF https://osf.io/3cmkr/
 
 ---
 
