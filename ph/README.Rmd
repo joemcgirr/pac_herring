@@ -245,7 +245,8 @@ To visualize results of each strategy, [see here](https://github.com/joemcgirr/p
 In order to include invariant sites, I run angsd directly with `.bam` files to create an `.saf` file for each population. Due to memory constraints, I randomly down sample the number of input `.bam` files to match the lowest population sample size (n = 41). I use the -nSites 100000000 flag due to memory limits. This breaks up genome into 7 chunks and gives you seven lines in the output `.sfs`. I sum columns to make final sfs. These sfs look the prettiest of the 3 strategies, but overestimate the number of singletons and doubletons.   
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#7_Nucleotide_diversity)
 ### light_snp_call
-In an attempt to address the excess of singletons, I tried a light snp calling with angsd before estimating sfs.
+In an attempt to address the excess of singletons, I tried a light snp calling with angsd before estimating sfs.   
+[See here](https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/demography/script_light_snp_call.sh)
 ### maf01 and maf05
 These sfs were generated from the GATK `.vcf` files with different minor allele frequency thresholds (maf > 0.01 or 0.05). The genotype likelihoods from the `.vcf` are the input for angsd (as opposed to `.bam` files as in `downsample41`). But because I use a minor allele frequency cutoff, the sfs are missing singletons, doubletons, etc.    
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#42_Use_realSFS_to_make_folded_and_unfolded_SFS_for_each_population)
