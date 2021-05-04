@@ -32,10 +32,9 @@ ph
 # dxy
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#5_Dxy)
 ### maf05
-maf files are minor allele frequencies estimated with angsd using genotype likelihoods from master vcf.   
-FARM path: 
+maf files are minor allele frequencies estimated with angsd using genotype likelihoods from master `.vcf`   
 ### windows
-dxy calculated in 50 kb sliding windows with 10kb steps
+dxy calculated in 50 kb sliding windows with 10kb steps.
 
 ---
 
@@ -50,7 +49,7 @@ ph
 
 ```
 # familiarize
-Metadata for samples, troubleshooting sample mislabeling, quality control metrics
+Metadata for samples, troubleshooting sample mislabeling, quality control metrics.
 ### multiqc_data
 QC results for .`fastq` and `.bam` using [multiqc](https://multiqc.info/)
 #### wgsMetrics
@@ -71,7 +70,7 @@ ph
 ```
 # freqs
 Allele frequencies pulled directly from the AF INFO from population `.vcf`   
-AFs from hard calls, not genotype likelihoods (for those, see ph/dxy/maf05/)   
+AFs from hard calls, not genotype likelihoods (for those, see .ph/dxy/maf05/.)   
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/AF_shifts/AF_shifts.html)
 ### persite
 Allele frequency differences between sampling periods within PWS, SS, and TB population.   
@@ -96,7 +95,7 @@ Fst and population branch statistic measured for three populations using 50kb sl
 
 ### maf05
 File name: `fst_pbs_50kb_win_10kb_step_folded_BC17_WA17_CA17.txt`   
-The header : `region	chr	midPos	Nsites	Fst01	Fst02	Fst12	PBS0	PBS1	PBS2`
+The header : `region	chr	midPos	Nsites	Fst01	Fst02	Fst12	PBS0	PBS1	PBS2`   
 BC17 = 0
 WA17 = 1
 CA17 = 2
@@ -137,7 +136,7 @@ ph
 
 ```
 # moments
-Folded 2D sfs for EXPLORITORY demographic inference using the [moments pipeline](https://github.com/dportik/moments_pipeline)   
+Folded 2D sfs for EXPLORATORY demographic inference using the [moments pipeline](https://github.com/dportik/moments_pipeline)   
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/demography/demography.html)
 
 ### downsample
@@ -181,7 +180,7 @@ ph
 ```
 # pcangsd
 Output file from [pcangsd](http://www.popgen.dk/software/index.php/PCAngsd)   
-[See here for workflow](https://htmlpreview.github.io/?https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population_structure/population_strucutre.html#61_PCAngsd).
+[See here for workflow](https://htmlpreview.github.io/?https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population_structure/population_strucutre.html#61_PCAngsd)
 
 ---
 
@@ -198,8 +197,8 @@ PCA and linkage disequilibrium outputs
 `plates_1_through_5_rm.txt` = samples in master `.vcf` and `.ped`   
 `*indep_pairwise_100_10_0.8.ld` = LD for `.vcf` with all samples in `plates_1_through_5_rm.txt`   
 `.eigenval` and `.eigenvec` from PCA for 2 `.vcf` files with different minor allele frequency thresholds (maf > 0.01 or 0.05)   
-[See here for PCA workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population_structure/population_strucutre.html#62_PLINK_PCA).   
-[See here for LD workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/Ne_LD/Ne_LD.html#4_Linkage_Disequilibrium).
+[See here for PCA workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population_structure/population_strucutre.html#62_PLINK_PCA)   
+[See here for LD workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/Ne_LD/Ne_LD.html#4_Linkage_Disequilibrium)
 ### pops 
 LD measured for each population
 
@@ -213,7 +212,7 @@ ph
 ```
 # popvae
 Output files from [popvae](https://github.com/kr-colab/popvae)   
-[See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population_structure/population_strucutre.html#64_Popvae). 
+[See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/population_structure/population_strucutre.html#64_Popvae)
 
 ---
 
@@ -248,7 +247,7 @@ In order to include invariant sites, I run angsd directly with `.bam` files to c
 ### light_snp_call
 In an attempt to address the excess of singletons, I tried a light snp calling with angsd before estimating sfs.
 ### maf01 and maf05
-These sfs were generated from the GATK `.vcf` files with different minor allele frequency thresholds (maf > 0.01 or 0.05). The genotype likelihoods from the `.vcf` are the input for angsd (as opposed to `.bam` files as in `downsample41`). But because I use a minor allele frequency cutoff, the sfs are missing singletons, doubletons, etc. 
+These sfs were generated from the GATK `.vcf` files with different minor allele frequency thresholds (maf > 0.01 or 0.05). The genotype likelihoods from the `.vcf` are the input for angsd (as opposed to `.bam` files as in `downsample41`). But because I use a minor allele frequency cutoff, the sfs are missing singletons, doubletons, etc.    
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#42_Use_realSFS_to_make_folded_and_unfolded_SFS_for_each_population)
 
 ---
@@ -274,7 +273,7 @@ Thetas estimated using sfs generated by angsd. Mainly used for nucleotide divers
 ### downsample_41
 In order to include invariant sites, I run angsd directly with `.bam` files to create an `.saf` file for each population. Due to memory constraints, I randomly down sample the number of input `.bam` files to match the lowest population sample size (n = 41). Thetas were estimated across 50kb sliding windows with 10 steps.   
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/popgen_stats/popgen_stats.html#7_Nucleotide_diversity)
-### vcf/maf05
+### maf05
 The genotype likelihoods from the master `.vcf` are the input for angsd (as opposed to `.bam` files as in `downsample41`). However, this overestimates nucleotide diversity because missing and invariant sites are ignored. I only include these for comparison. Thetas were estimated across 50kb sliding windows with 10 steps. 
 ---
 
@@ -288,13 +287,18 @@ ph
 ```
 # vcfs
 Zipped `.vcf` files generated by GATK with genotype likelihoods. There are two main files with  different minor allele frequency thresholds (maf > 0.01 or 0.05). There is another larger vcf without a maf threshold on FARM (`/home/jamcgirr/ph/data/vcfs/ph_filtered_snps_minDP600_maxDP2000_minQ20_minMQ30_NS0.5.vcf.gz`). There are also `.vcf` files for each population (`/home/jamcgirr/ph/data/vcfs/split_pops`).  
-`sample_metadata.txt` has metadata for samples in vcf.
+`sample_metadata.txt` has metadata for samples in vcf.   
 [See here for workflow](https://htmlpreview.github.io/?https://github.com/joemcgirr/pac_herring/blob/master/Rmarkdown/fastq_to_vcf/fastq_to_vcf.html)
 
 ---
 # vince
 Vince Buffalo's short term estimates of effective population size based on variance in the temporal changes of allele frequency. 
 
+---
+
+---
+
+---
 
 IMPORTANT NOTES: 
 
